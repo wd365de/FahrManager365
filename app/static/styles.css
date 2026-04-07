@@ -1,0 +1,285 @@
+body {
+    background-color: #f8f9fa;
+}
+
+.app-shell {
+    display: flex;
+    min-height: 100vh;
+}
+
+.app-sidebar {
+    width: 280px;
+    flex-shrink: 0;
+    display: flex;
+    background: #ffffff;
+    border-right: 1px solid #d7dbe0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    box-shadow: 2px 0 10px rgba(15, 23, 42, 0.05);
+}
+
+.app-sidebar-rail {
+    width: 52px;
+    background: #e11d48;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 0.4rem;
+}
+
+.rail-logo {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #111827;
+    text-decoration: none;
+    background: #ffffff;
+}
+
+.rail-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.rail-link {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #ffffff;
+    text-decoration: none;
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.rail-link.active,
+.rail-link:hover {
+    background: #ffffff;
+    color: #be123c;
+}
+
+.app-sidebar-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem 0.9rem;
+    background: #f8fafc;
+}
+
+.app-brand {
+    display: block;
+    color: #0f172a;
+    text-decoration: none;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    font-size: 0.95rem;
+}
+
+.sidebar-section-title {
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #6b7280;
+    margin: 0.25rem 0 0.6rem;
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.sidebar-link {
+    display: block;
+    text-decoration: none;
+    color: #111827;
+    font-size: 0.9rem;
+    padding: 0.42rem 0.5rem;
+    border-radius: 8px;
+}
+
+.sidebar-link:hover {
+    background: #e5e7eb;
+}
+
+.sidebar-link.active {
+    background: #dbeafe;
+    color: #1e3a8a;
+    font-weight: 600;
+}
+
+.sidebar-link-icon {
+    display: inline-block;
+    width: 1.3rem;
+    text-align: center;
+    margin-right: 0.25rem;
+}
+
+.sidebar-group {
+    border-radius: 8px;
+    padding: 0.1rem 0.2rem;
+}
+
+.sidebar-group summary {
+    cursor: pointer;
+    list-style: none;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: #374151;
+    padding: 0.35rem 0.3rem;
+}
+
+.sidebar-group summary::-webkit-details-marker {
+    display: none;
+}
+
+.sidebar-group[open] {
+    background: #f1f5f9;
+}
+
+.sidebar-group .sidebar-link {
+    margin-left: 0.2rem;
+}
+
+.sidebar-footer {
+    margin-top: auto;
+}
+
+.app-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-content-auth {
+    padding: 1rem 1.25rem;
+}
+
+.planner-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 1rem;
+}
+
+.planner-calendar .table td {
+    min-width: 170px;
+    vertical-align: top;
+}
+
+.calendar-slot {
+    display: block;
+    text-decoration: none;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 0.25rem 0.4rem;
+    margin-bottom: 0.35rem;
+    color: #111827;
+    background: #f9fafb;
+}
+
+.calendar-slot:hover {
+    border-color: #60a5fa;
+    background: #eff6ff;
+}
+
+.calendar-slot.is-booked {
+    border-color: #fca5a5;
+    background: #fef2f2;
+}
+
+.calendar-slot.is-active {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 1px #2563eb;
+}
+
+.slot-time {
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.slot-state {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #b91c1c;
+}
+
+.slot-student {
+    font-size: 0.78rem;
+}
+
+.planner-detail-panel {
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    background: #ffffff;
+    padding: 0.9rem;
+}
+
+.detail-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.45rem 0.6rem;
+    margin-bottom: 0.7rem;
+}
+
+.detail-field.full {
+    grid-column: 1 / -1;
+}
+
+.detail-field label {
+    display: block;
+    font-size: 0.72rem;
+    color: #6b7280;
+    margin-bottom: 0.2rem;
+    font-weight: 600;
+}
+
+.planner-detail-panel .table th {
+    width: 42%;
+    font-size: 0.78rem;
+    color: #374151;
+}
+
+.planner-detail-panel .table td {
+    font-size: 0.78rem;
+}
+
+.week-slot-summary {
+    cursor: pointer;
+}
+
+.week-slot-details[open] {
+    background: #eef2ff;
+}
+
+.card span {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+@media (max-width: 991px) {
+    .app-sidebar {
+        width: 210px;
+    }
+
+    .app-sidebar-rail {
+        width: 44px;
+    }
+
+    .app-content-auth {
+        padding: 0.75rem;
+    }
+
+    .planner-layout {
+        grid-template-columns: 1fr;
+    }
+}

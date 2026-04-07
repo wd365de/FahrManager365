@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .student-form-card {
+        background: #f8fbff;
+    }
+
+    .student-form-card .form-control,
+    .student-form-card .form-select {
+        background-color: #eef4fb;
+        border-color: #d5e2f1;
+    }
+
+    .student-form-card .form-control:focus,
+    .student-form-card .form-select:focus {
+        background-color: #f4f8fd;
+        border-color: #9eb8d8;
+        box-shadow: 0 0 0 0.2rem rgba(92, 131, 177, 0.2);
+    }
+
+    .student-form-section-title {
+        background: #e3edf8;
+        border: 1px solid #c8d9ec;
+        border-radius: 0.5rem;
+        padding: 0.45rem 0.75rem;
+    }
+</style>
+<h1 class="h4 mb-3">{{ 'Schüler bearbeiten' if student else 'Neuer Schüler' }}</h1>
+{% if error %}
+    <div class="alert alert-danger">
+        <div>{{ error }}</div>
+        {% if field_errors %}
+            <ul class="mb-0 mt-2">
+                {% for field_label in field_errors %}
+                    <li>{{ field_label }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+{% endif %}
+<form method="post" action="{{ action }}" class="card card-body student-form-card">
+    {% set values = form_values if form_values else {} %}
+    {% set inline_error_keys = field_error_keys if field_error_keys else [] %}
+    <div class="row g-4">
+        <div class="col-12"><h2 class="h6 mb-0 student-form-section-title">Basisdaten</h2></div>
+        <div class="col-md-2 col-lg-2">
+            <label class="form-label">Anrede *</label>
+            {% set selected_salutation = values.salutation if values.salutation is defined else ((student.salutation or '') if student else '') %}
+            <select class="form-select" name="salutation" required>
+                <option value="">Bitte wählen</option>
+                <option value="Herr" {% if selected_salutation == 'Herr' %}selected{% endif %}>Herr</option>
+                <option value="Frau" {% if selected_salutation == 'Frau' %}selected{% endif %}>Frau</option>
+                <option value="Divers" {% if selected_salutation == 'Divers' %}selected{% endif %}>Divers</option>
+            </select>
+        </div>
+        <div class="col-md-5 col-lg-5">
+            <label class="form-label">Vorname *</label>
+            <input class="form-control" name="first_name" value="{{ values.first_name if values.first_name is defined else ((student.first_name or '') if student else '') }}" required>
+        </div>
+        <div class="col-md-5 col-lg-5">
+            <label class="form-label">Name *</label>
+            <input class="form-control" name="last_name" value="{{ values.last_name if values.last_name is defined else ((student.last_name or '') if student else '') }}" required>
+        </div>
+        <div class="col-md-6 col-lg-4">
+            <label class="form-label">E-Mail *</label>
+            <input class="form-control" type="email" name="email" value="{{ values.email if values.email is defined else (student.user.email if student else '') }}" required>
+        </div>
+        {% if not student %}
+        <div class="col-md-6 col-lg-4">
+            <label class="form-label">Passwort</label>
+            <input class="form-control" type="password" name="password" required>
+        </div>
+        {% endif %}
+        <div class="col-md-6 col-lg-4">
+            <label class="form-label">Fester Fahrlehrer</label>
+            <select class="form-select" name="teacher_id" required>
+                {% for teacher in teachers %}
+                    <option value="{{ teacher.id }}" {% if (student and student.teacher_id == teacher.id) or (selected_teacher_id and selected_teacher_id == teacher.id) %}selected{% endif %}>{{ teacher.user.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-12"><h2 class="h6 mb-0 mt-3 student-form-section-title">Personendaten</h2></div>
+        <div class="col-md-4">
+            <label class="form-label">Geburtsdatum *</label>
+            <input class="form-control" type="date" name="birth_date" value="{{ values.birth_date if values.birth_date is defined else ((student.birth_date or '') if student else '') }}" required>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Geburtsort *</label>
+            <input class="form-control" name="birth_place" value="{{ values.birth_place if values.birth_place is defined else ((student.birth_place or '') if student else '') }}" required>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Staatsangehörigkeit (Land) *</label>
+            <input class="form-control" name="citizenship_country" value="{{ values.citizenship_country if values.citizenship_country is defined else ((student.citizenship_country or '') if student else '') }}" required>
+        </div>
+
+        <div class="col-12"><h2 class="h6 mb-0 mt-3 student-form-section-title">Adressdaten</h2></div>
+        <div class="col-md-4 col-lg-2">
+            <label class="form-label">PLZ *</label>
+            <input class="form-control" name="postal_code" value="{{ values.postal_code if values.postal_code is defined else ((student.postal_code or '') if student else '') }}" required>
+        </div>
+        <div class="col-md-8 col-lg-4">
+            <label class="form-label">Ort *</label>
+            <input class="form-control" name="city" value="{{ values.city if values.city is defined else ((student.city or '') if student else '') }}" required>
+        </div>
+        <div class="col-md-8 col-lg-4">
+            <label class="form-label">Straße *</label>
+            <input class="form-control" name="street" value="{{ values.street if values.street is defined else ((student.street or '') if student else '') }}" required>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Nr. *</label>
+            <input class="form-control" name="house_number" value="{{ values.house_number if values.house_number is defined else ((student.house_number or '') if student else '') }}" required>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Mobil *</label>
+            <input class="form-control" name="mobile_phone" value="{{ values.mobile_phone if values.mobile_phone is defined else ((student.mobile_phone or '') if student else '') }}" required>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Telefon privat *</label>
+            <input class="form-control" name="phone_private" value="{{ values.phone_private if values.phone_private is defined else ((student.phone_private or '') if student else '') }}" required>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Telefon beruflich *</label>
+            <input class="form-control" name="phone_work" value="{{ values.phone_work if values.phone_work is defined else ((student.phone_work or '') if student else '') }}" required>
+        </div>
+
+        <div class="col-12"><h2 class="h6 mb-0 mt-3 student-form-section-title">Zusatzinfos</h2></div>
+        <div class="col-md-6 col-lg-4">
+            <label class="form-label">Filiale Prüfort *</label>
+            <input class="form-control" name="branch_exam_location" value="{{ values.branch_exam_location if values.branch_exam_location is defined else ((student.branch_exam_location or '') if student else '') }}" required>
+        </div>
+        <div class="col-md-6 col-lg-4">
+            <label class="form-label">Prüforganisation *</label>
+            <input class="form-control" name="exam_organization" value="{{ values.exam_organization if values.exam_organization is defined else ((student.exam_organization or '') if student else '') }}" required>
+        </div>
+        <div class="col-md-12 col-lg-4 d-flex align-items-end">
+            <div class="form-check form-switch">
+                <input type="hidden" name="has_visual_aid" value="0">
+                {% set visual_aid_checked = (values.has_visual_aid if values.has_visual_aid is defined else (student.has_visual_aid if student else false)) %}
+                <input class="form-check-input" type="checkbox" role="switch" id="has-visual-aid" name="has_visual_aid" value="1" {% if visual_aid_checked in [true, '1', 'true', 'on', 'yes'] %}checked{% endif %}>
+                <label class="form-check-label" for="has-visual-aid">Sehhilfe (Ja/Nein)</label>
+            </div>
+        </div>
+        <div class="col-md-12">
+            <label class="form-label">Info</label>
+            <textarea class="form-control" name="info_text" rows="2">{{ values.info_text if values.info_text is defined else ((student.info_text or '') if student else '') }}</textarea>
+        </div>
+
+        <div class="col-12"><h2 class="h6 mb-0 mt-3 student-form-section-title">Ausbildung</h2></div>
+        <div class="col-md-3">
+            <label class="form-label">Theorie</label>
+            <select class="form-select" name="theory_status">
+                <option value="offen" {% if student and student.theory_status == 'offen' %}selected{% endif %}>offen</option>
+                <option value="bestanden" {% if student and student.theory_status == 'bestanden' %}selected{% endif %}>bestanden</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Praxis</label>
+            <select class="form-select" name="practical_status">
+                <option value="offen" {% if student and student.practical_status == 'offen' %}selected{% endif %}>offen</option>
+                <option value="laeuft" {% if student and student.practical_status == 'laeuft' %}selected{% endif %}>läuft</option>
+                <option value="bestanden" {% if student and student.practical_status == 'bestanden' %}selected{% endif %}>bestanden</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Klasse *</label>
+            {% set selected_training_class = values.training_class if values.training_class is defined else ((student.training_class or master_data_defaults.class) if student else master_data_defaults.class) %}
+            <select class="form-select" name="training_class" required>
+                {% for item in master_data_options.classes %}
+                    <option value="{{ item }}" {% if selected_training_class == item %}selected{% endif %}>{{ item }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Schlüsselzahl</label>
+            <input class="form-control" name="license_key_number" value="{{ values.license_key_number if values.license_key_number is defined else ((student.license_key_number or '') if student else '') }}" required>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Erteilungsart *</label>
+            {% set selected_issue_type = values.issue_type if values.issue_type is defined else ((student.issue_type or '') if student else '') %}
+            <select class="form-select" name="issue_type" required>
+                {% for item in master_data_options.issue_types %}
+                    <option value="{{ item }}" {% if selected_issue_type == item %}selected{% endif %}>{{ item }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Anmeldedatum *</label>
+            <input class="form-control" type="date" name="enrollment_date" value="{{ values.enrollment_date if values.enrollment_date is defined else ((student.enrollment_date or '') if student else '') }}" required>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Kurs *</label>
+            {% set selected_course = values.course_name if values.course_name is defined else ((student.course_name or '') if student else '') %}
+            <select class="form-select" name="course_name" required>
+                {% for item in master_data_options.courses %}
+                    <option value="{{ item }}" {% if selected_course == item %}selected{% endif %}>{{ item }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Terminart</label>
+            {% set selected_appointment_type = values.appointment_type if values.appointment_type is defined else ((student.appointment_type or master_data_defaults.appointment_type) if student else master_data_defaults.appointment_type) %}
+            <select class="form-select" name="appointment_type">
+                {% for item in master_data_options.appointment_types %}
+                    <option value="{{ item }}" {% if selected_appointment_type == item %}selected{% endif %}>{{ item }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Fahrzeug</label>
+            {% set selected_vehicle_name = values.vehicle_name if values.vehicle_name is defined else ((student.vehicle_name or master_data_defaults.vehicle) if student else master_data_defaults.vehicle) %}
+            <select class="form-select" name="vehicle_name">
+                {% for item in master_data_options.vehicles %}
+                    <option value="{{ item }}" {% if selected_vehicle_name == item %}selected{% endif %}>{{ item }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-12 col-lg-6 d-flex align-items-end">
+            <div class="form-check form-switch">
+                <input type="hidden" name="bf17_enabled" value="0">
+                {% set bf17_checked = (values.bf17_enabled if values.bf17_enabled is defined else (student.bf17_enabled if student else false)) %}
+                <input class="form-check-input" type="checkbox" role="switch" id="bf17-enabled" name="bf17_enabled" value="1" {% if bf17_checked in [true, '1', 'true', 'on', 'yes'] %}checked{% endif %}>
+                <label class="form-check-label" for="bf17-enabled">BF17 (Ja/Nein)</label>
+            </div>
+        </div>
+
+        <div class="col-12"><h2 class="h6 mb-0 mt-3 student-form-section-title">Zahlungsdaten</h2></div>
+        <div class="col-md-6 col-lg-4">
+            <label class="form-label">Preisliste *</label>
+            {% set selected_price_list = values.price_list if values.price_list is defined else ((student.price_list or '') if student else '') %}
+            <select class="form-select" name="price_list" required>
+                {% for item in master_data_options.price_lists %}
+                    <option value="{{ item }}" {% if selected_price_list == item %}selected{% endif %}>{{ item }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-6 col-lg-4">
+            <label class="form-label">Zahlungsart *</label>
+            {% set selected_payment_method = values.payment_method if values.payment_method is defined else ((student.payment_method or '') if student else '') %}
+            <select class="form-select" name="payment_method" required>
+                {% for item in master_data_options.payment_methods %}
+                    <option value="{{ item }}" {% if selected_payment_method == item %}selected{% endif %}>{{ item }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-6 col-lg-4">
+            <label class="form-label">Kostenträger *</label>
+            {% set selected_cost_bearer = values.cost_bearer if values.cost_bearer is defined else ((student.cost_bearer or 'keine') if student else 'keine') %}
+            <select class="form-select" name="cost_bearer" required>
+                <option value="keine" {% if selected_cost_bearer == 'keine' %}selected{% endif %}>keine</option>
+                <option value="firma" {% if selected_cost_bearer == 'firma' %}selected{% endif %}>Firma</option>
+                <option value="rechnungsanschrift" {% if selected_cost_bearer == 'rechnungsanschrift' %}selected{% endif %}>Rechnungsanschrift</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Produkt</label>
+            {% set selected_product_name = values.product_name if values.product_name is defined else ((student.product_name or master_data_defaults.product) if student else master_data_defaults.product) %}
+            <select class="form-select" name="product_name">
+                {% for item in master_data_options.products %}
+                    <option value="{{ item }}" {% if selected_product_name == item %}selected{% endif %}>{{ item }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-12">
+            <label class="form-label">Notizen</label>
+            <textarea class="form-control" name="notes" rows="3">{{ values.notes if values.notes is defined else ((student.notes or '') if student else '') }}</textarea>
+        </div>
+    </div>
+    <div class="position-sticky bottom-0 mt-4 pt-3 pb-2 d-flex gap-2 bg-white border-top" style="z-index: 10;">
+        <button class="btn btn-primary" type="submit">Speichern</button>
+        <a class="btn btn-outline-secondary" href="/students">Zurück</a>
+    </div>
+</form>
+{% if inline_error_keys %}
+<script id="student-form-inline-error-keys" type="application/json">{{ inline_error_keys | tojson }}</script>
+<script id="student-form-required-labels" type="application/json">{{ required_field_labels | tojson }}</script>
+<script>
+(() => {
+    const errorKeysElement = document.getElementById("student-form-inline-error-keys");
+    const labelsElement = document.getElementById("student-form-required-labels");
+    const errorKeys = JSON.parse(errorKeysElement?.textContent || "[]");
+    const labels = JSON.parse(labelsElement?.textContent || "{}");
+
+    errorKeys.forEach((key) => {
+        const field = document.querySelector(`[name="${key}"]`);
+        if (!field) {
+            return;
+        }
+
+        field.classList.add("is-invalid");
+
+        if (field.parentElement && field.parentElement.classList.contains("form-check")) {
+            if (!field.parentElement.querySelector(".invalid-feedback")) {
+                const feedback = document.createElement("div");
+                feedback.className = "invalid-feedback d-block";
+                feedback.textContent = `${labels[key] || key} ist ein Pflichtfeld.`;
+                field.parentElement.appendChild(feedback);
+            }
+            return;
+        }
+
+        const nextSibling = field.nextElementSibling;
+        if (nextSibling && nextSibling.classList.contains("invalid-feedback")) {
+            return;
+        }
+
+        const feedback = document.createElement("div");
+        feedback.className = "invalid-feedback";
+        feedback.textContent = `${labels[key] || key} ist ein Pflichtfeld.`;
+        field.insertAdjacentElement("afterend", feedback);
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}

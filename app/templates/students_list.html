@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4">Schüler</h1>
+    <a href="/students/new" class="btn btn-primary">Neuer Schüler</a>
+</div>
+<table class="table table-striped table-bordered">
+    <thead>
+    <tr>
+        <th>Name</th>
+        <th>E-Mail</th>
+        <th>Fahrlehrer</th>
+        <th>Klasse</th>
+        <th>Zahlungsart</th>
+        <th>Preisliste</th>
+        <th>Theorie</th>
+        <th>Praxis</th>
+        <th>Readiness</th>
+        <th>Graph</th>
+        <th>Aktionen</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for student in students %}
+        {% set readiness = readiness_by_student.get(student.id) %}
+        <tr>
+            <td>{{ student.user.name }}</td>
+            <td>{{ student.user.email }}</td>
+            <td>{{ student.teacher.user.name if student.teacher else '-' }}</td>
+            <td>{{ student.training_class or '-' }}</td>
+            <td>{{ student.payment_method or '-' }}</td>
+            <td>{{ student.price_list or '-' }}</td>
+            <td>{{ student.theory_status }}</td>
+            <td>{{ student.practical_status }}</td>
+            <td>
+                {% if readiness %}
+                    {% if readiness.level == 'green' %}
+                        <span class="badge text-bg-success">{{ readiness.score }}</span>
+                    {% elif readiness.level == 'yellow' %}
+                        <span class="badge text-bg-warning">{{ readiness.score }}</span>
+                    {% else %}
+                        <span class="badge text-bg-danger">{{ readiness.score }}</span>
+                    {% endif %}
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+            <td style="min-width: 180px;">
+                {% if readiness %}
+                    {% for component in readiness.components %}
+                        <div class="progress mb-1" role="progressbar" aria-valuenow="{{ component.value }}" aria-valuemin="0" aria-valuemax="100" style="height: 6px;">
+                            <div class="progress-bar readiness-mini" data-width="{{ component.value }}" title="{{ component.label }}: {{ component.value }}%"></div>
+                        </div>
+                    {% endfor %}
+                    <div class="small text-muted d-flex flex-wrap gap-2">
+                        <span><span class="d-inline-block rounded-circle bg-primary me-1" style="width:8px;height:8px;"></span>Praxis</span>
+                        <span><span class="d-inline-block rounded-circle bg-info me-1" style="width:8px;height:8px;"></span>Termintreue</span>
+                        <span><span class="d-inline-block rounded-circle bg-warning me-1" style="width:8px;height:8px;"></span>Theorie</span>
+                        <span><span class="d-inline-block rounded-circle bg-secondary me-1" style="width:8px;height:8px;"></span>Profil</span>
+                    </div>
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+            <td class="d-flex gap-2">
+                <a class="btn btn-sm btn-secondary" href="/students/{{ student.id }}/edit">Bearbeiten</a>
+                <form method="post" action="/students/{{ student.id }}/delete" onsubmit="return confirm('Wirklich löschen?');">
+                    <button class="btn btn-sm btn-danger" type="submit">Löschen</button>
+                </form>
+            </td>
+        </tr>
+    {% else %}
+        <tr><td colspan="11">Keine Schüler vorhanden.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+<script>
+    document.querySelectorAll('.readiness-mini').forEach(function (bar) {
+        var width = parseInt(bar.dataset.width || '0', 10);
+        bar.style.width = Math.max(0, Math.min(100, width)) + '%';
+    });
+</script>
+{% endblock %}

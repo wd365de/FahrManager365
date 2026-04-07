@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="h4 mb-3">Termine</h1>
+<table class="table table-striped table-bordered">
+    <thead>
+    <tr><th>Schüler</th><th>Fahrlehrer</th><th>Start</th><th>Ende</th><th>Dauer</th><th>Status</th><th>Aktion</th></tr>
+    </thead>
+    <tbody>
+    {% for appointment in appointments %}
+        <tr>
+            <td>{{ appointment.student.user.name }}</td>
+            <td>{{ appointment.teacher.user.name }}</td>
+            <td>{{ appointment.start_at }}</td>
+            <td>{{ appointment.end_at }}</td>
+            <td>{{ appointment.duration_min }} min</td>
+            <td>
+                {% if appointment.status == 'booked' and appointment.requires_teacher_confirmation %}
+                    angefragt
+                {% elif appointment.status == 'booked' %}
+                    bestätigt
+                {% else %}
+                    {{ appointment.status }}
+                {% endif %}
+            </td>
+            <td>
+                {% if appointment.status == 'booked' %}
+                    {% if appointment.requires_teacher_confirmation and (user.role == 'teacher' or user.role == 'admin') %}
+                        <div class="d-flex gap-1">
+                            <form method="post" action="/appointments/{{ appointment.id }}/confirm">
+                                <button class="btn btn-sm btn-success" type="submit">Bestätigen</button>
+                            </form>
+                            <form method="post" action="/appointments/{{ appointment.id }}/reject">
+                                <button class="btn btn-sm btn-outline-danger" type="submit">Ablehnen</button>
+                            </form>
+                        </div>
+                    {% else %}
+                        <form method="post" action="/appointments/{{ appointment.id }}/cancel">
+                            <button class="btn btn-sm btn-warning" type="submit">Stornieren</button>
+                        </form>
+                    {% endif %}
+                {% endif %}
+            </td>
+        </tr>
+    {% else %}
+        <tr><td colspan="7">Keine Termine vorhanden.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

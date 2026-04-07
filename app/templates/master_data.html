@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="h4 mb-3">Stammdatenfelder Terminplaner</h1>
+<p class="text-muted small mb-3">Die Felder im rechten Slot-Detailpanel (Terminart, Klasse, Produkt, Fahrzeug) werden aus diesen Stammdaten gelesen.</p>
+
+<div class="card card-body mb-3">
+    <h2 class="h6 mb-2">Produktkatalog-Vorlage</h2>
+    <p class="small text-muted mb-3">Importiert den Standardkatalog. Falls eine Zeile das Format <code>Produktname|Zuordnung</code> hat, wird nur der Produktname vor dem <code>|</code> übernommen.</p>
+    <form method="post" action="/master-data/import-default-products">
+        <button class="btn btn-outline-secondary btn-sm" type="submit">Standardkatalog importieren</button>
+    </form>
+</div>
+
+<form method="post" action="/master-data" class="card card-body">
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <label class="form-label">Terminarten (eine Zeile = ein Eintrag)</label>
+            <textarea class="form-control" name="appointment_types" rows="7">{{ master_data_raw.appointment_types }}</textarea>
+        </div>
+        <div class="col-lg-6">
+            <label class="form-label">Standard Terminart</label>
+            <select class="form-select" name="default_appointment_type">
+                {% for item in master_data_options.appointment_types %}
+                    <option value="{{ item }}" {% if item == master_data_defaults.appointment_type %}selected{% endif %}>{{ item }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-lg-6">
+            <label class="form-label">Klassen (eine Zeile = ein Eintrag)</label>
+            <textarea class="form-control" name="classes" rows="7">{{ master_data_raw.classes }}</textarea>
+        </div>
+        <div class="col-lg-6">
+            <label class="form-label">Standard Klasse</label>
+            <select class="form-select" name="default_class">
+                {% for item in master_data_options.classes %}
+                    <option value="{{ item }}" {% if item == master_data_defaults.class %}selected{% endif %}>{{ item }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-lg-6">
+            <label class="form-label">Produkte (eine Zeile = ein Eintrag)</label>
+            <textarea class="form-control" name="products" rows="7">{{ master_data_raw.products }}</textarea>
+        </div>
+        <div class="col-lg-6">
+            <label class="form-label">Standard Produkt</label>
+            <select class="form-select" name="default_product">
+                {% for item in master_data_options.products %}
+                    <option value="{{ item }}" {% if item == master_data_defaults.product %}selected{% endif %}>{{ item }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-12">
+            <label class="form-label">Produkte (optional mit Format Produktname|Zuordnung)</label>
+            <textarea class="form-control" name="product_assignments" rows="10">{{ master_data_raw.product_assignments }}</textarea>
+            <p class="small text-muted mt-1 mb-0">Alles nach <code>|</code> wird automatisch entfernt. Es bleibt nur der Produktname.</p>
+        </div>
+
+        <div class="col-lg-6">
+            <label class="form-label">Fahrzeuge (eine Zeile = ein Eintrag)</label>
+            <textarea class="form-control" name="vehicles" rows="7">{{ master_data_raw.vehicles }}</textarea>
+        </div>
+        <div class="col-lg-6">
+            <label class="form-label">Standard Fahrzeug</label>
+            <select class="form-select" name="default_vehicle">
+                {% for item in master_data_options.vehicles %}
+                    <option value="{{ item }}" {% if item == master_data_defaults.vehicle %}selected{% endif %}>{{ item }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-lg-6">
+            <label class="form-label">Zahlungsarten (eine Zeile = ein Eintrag)</label>
+            <textarea class="form-control" name="payment_methods" rows="4">{{ master_data_raw.payment_methods }}</textarea>
+        </div>
+        <div class="col-lg-6">
+            <label class="form-label">Kurse (eine Zeile = ein Eintrag)</label>
+            <textarea class="form-control" name="courses" rows="4">{{ master_data_raw.courses }}</textarea>
+        </div>
+        <div class="col-lg-6">
+            <label class="form-label">Erteilungsarten (eine Zeile = ein Eintrag)</label>
+            <textarea class="form-control" name="issue_types" rows="4">{{ master_data_raw.issue_types }}</textarea>
+        </div>
+        <div class="col-lg-6">
+            <label class="form-label">Preislisten (eine Zeile = ein Eintrag)</label>
+            <textarea class="form-control" name="price_lists" rows="4">{{ master_data_raw.price_lists }}</textarea>
+        </div>
+    </div>
+
+    <div class="mt-3">
+        <button class="btn btn-primary" type="submit">Stammdaten speichern</button>
+    </div>
+</form>
+
+{% if master_data_options.product_assignments %}
+<div class="card card-body mt-3">
+    <h2 class="h6 mb-3">Vorschau Produktnamen</h2>
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Produktname</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in master_data_options.product_assignments %}
+                <tr>
+                    <td>{{ row.product_name }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
