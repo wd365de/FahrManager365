@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
+import os
 from pathlib import Path
 from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
@@ -17,10 +18,11 @@ from app.routes.auth_routes import router as auth_router
 from app.routes.portal_routes import router as portal_router
 
 app = FastAPI(title="FahrManager 360")
+SESSION_SECRET = os.getenv("SESSION_SECRET", "fahrmanager360-local-dev-secret")
 
 app.add_middleware(
     SessionMiddleware,
-    secret_key="fahrmanager360-local-dev-secret",
+    secret_key=SESSION_SECRET,
 )
 
 APP_DIR = Path(__file__).resolve().parent

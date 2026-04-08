@@ -69,6 +69,45 @@ uvicorn app.main:app --reload
 
 - SQLite-Datei wird beim ersten Start automatisch erzeugt:
   - `fahrmanager360.db`
+- Für Docker/VPS kann stattdessen PostgreSQL per `DATABASE_URL` genutzt werden.
+
+## Docker (VPS, app + postgres + nginx)
+
+### 1) Voraussetzungen auf dem VPS
+
+- Docker und Docker Compose Plugin installieren
+- Port `80` in der Firewall freigeben
+
+### 2) Projekt deployen
+
+```bash
+git clone https://github.com/wd365de/FahrManager365.git /opt/fahrmanager
+cd /opt/fahrmanager
+cp docker.env.template .env
+```
+
+Danach `.env` anpassen (mindestens `POSTGRES_PASSWORD` und `SESSION_SECRET`).
+
+### 3) Container starten
+
+```bash
+docker compose up -d --build
+docker compose ps
+```
+
+App ist danach über `http://<VPS-IP>/login` erreichbar.
+
+### 4) Updates einspielen
+
+```bash
+./deploy.sh
+```
+
+Falls nötig vorher ausführbar machen:
+
+```bash
+chmod +x deploy.sh
+```
 
 ## Demo-Admin (automatisch angelegt)
 
