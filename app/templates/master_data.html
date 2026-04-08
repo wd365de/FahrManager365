@@ -5,7 +5,7 @@
 
 <div class="card card-body mb-3">
     <h2 class="h6 mb-2">Produktkatalog-Vorlage</h2>
-    <p class="small text-muted mb-3">Importiert den Standardkatalog. Falls eine Zeile das Format <code>Produktname|Zuordnung</code> hat, wird nur der Produktname vor dem <code>|</code> übernommen.</p>
+    <p class="small text-muted mb-3">Importiert den aktuellen Standardkatalog für Produkte.</p>
     <form method="post" action="/master-data/import-default-products">
         <button class="btn btn-outline-secondary btn-sm" type="submit">Standardkatalog importieren</button>
     </form>
@@ -52,12 +52,6 @@
             </select>
         </div>
 
-        <div class="col-12">
-            <label class="form-label">Produkte (optional mit Format Produktname|Zuordnung)</label>
-            <textarea class="form-control" name="product_assignments" rows="10">{{ master_data_raw.product_assignments }}</textarea>
-            <p class="small text-muted mt-1 mb-0">Alles nach <code>|</code> wird automatisch entfernt. Es bleibt nur der Produktname.</p>
-        </div>
-
         <div class="col-lg-6">
             <label class="form-label">Fahrzeuge (eine Zeile = ein Eintrag)</label>
             <textarea class="form-control" name="vehicles" rows="7">{{ master_data_raw.vehicles }}</textarea>
@@ -93,26 +87,4 @@
         <button class="btn btn-primary" type="submit">Stammdaten speichern</button>
     </div>
 </form>
-
-{% if master_data_options.product_assignments %}
-<div class="card card-body mt-3">
-    <h2 class="h6 mb-3">Vorschau Produktnamen</h2>
-    <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
-            <thead>
-                <tr>
-                    <th>Produktname</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in master_data_options.product_assignments %}
-                <tr>
-                    <td>{{ row.product_name }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-{% endif %}
 {% endblock %}

@@ -18,7 +18,6 @@ from app.planner_settings import (
 )
 from app.settings import DEFAULT_BOOKABLE_HOURS_BEFORE, WEEK_SLOT_DURATION_MINUTES
 from app.settings import (
-    DEFAULT_PRODUCT_ASSIGNMENTS,
     MASTER_DATA_APPOINTMENT_TYPES,
     MASTER_DATA_CLASSES,
     MASTER_DATA_DEFAULT_APPOINTMENT_TYPE,
@@ -32,6 +31,7 @@ from app.settings import (
     MASTER_DATA_PRODUCT_ASSIGNMENTS,
     MASTER_DATA_PRODUCTS,
     MASTER_DATA_VEHICLES,
+    PLANNER_SETTING_DEFINITIONS,
     PLANNER_SETTING_SHOW_LOCKED_SLOTS,
 )
 from app.routes.utils import (
@@ -153,6 +153,40 @@ def parse_product_assignments(raw_value: str) -> list[dict[str, str]]:
     for product_name in parse_product_names(raw_value):
         rows.append({"product_name": product_name, "assignment": product_name})
     return rows
+
+
+PRODUCT_COLOR_OVERRIDES = {
+    "Überlandfahrt": "#f97316",
+    "Autobahnfahrt": "#fb923c",
+    "Nachtfahrt": "#b45309",
+    "Testfahrt B197": "#f87171",
+    "Simulator Stunde": "#8b5cf6",
+    "Fehlstunde": "#9ca3af",
+    "Übungsfahrt": "#0ea5e9",
+    "Beleuchtungsfahrt": "#c2410c",
+}
+PRODUCT_COLOR_PALETTE = [
+    "#0ea5e9",
+    "#f97316",
+    "#8b5cf6",
+    "#22c55e",
+    "#f59e0b",
+    "#ef4444",
+    "#14b8a6",
+    "#6366f1",
+]
+
+
+def get_product_color_map(products: list[str]) -> dict[str, str]:
+    color_map: dict[str, str] = {}
+    fallback_index = 0
+    for product in products:
+        if product in PRODUCT_COLOR_OVERRIDES:
+            color_map[product] = PRODUCT_COLOR_OVERRIDES[product]
+            continue
+        color_map[product] = PRODUCT_COLOR_PALETTE[fallback_index % len(PRODUCT_COLOR_PALETTE)]
+        fallback_index += 1
+    return color_map
 
 
 def get_master_data_context(db: Session) -> dict[str, object]:
@@ -286,13 +320,12 @@ def master_data_import_default_products(request: Request, db: Session = Depends(
     if redirect:
         return redirect
 
-    imported_product_names = parse_product_names(DEFAULT_PRODUCT_ASSIGNMENTS)
-    set_planner_setting_value(db, MASTER_DATA_PRODUCT_ASSIGNMENTS, "\n".join(imported_product_names))
-    unique_product_names = []
-    for product_name in imported_product_names:
-        if product_name not in unique_product_names:
-            unique_product_names.append(product_name)
-    set_planner_setting_value(db, MASTER_DATA_PRODUCTS, "\n".join(unique_product_names))
+    default_products_raw = PLANNER_SETTING_DEFINITIONS.get(MASTER_DATA_PRODUCTS, {}).get("default", "")
+    imported_product_names = parse_master_data_entries(default_products_raw)
+    set_planner_setting_value(db, MASTER_DATA_PRODUCTS, "\n".join(imported_product_names))
+    set_planner_setting_value(db, MASTER_DATA_PRODUCT_ASSIGNMENTS, "")
+    if imported_product_names:
+        set_planner_setting_value(db, MASTER_DATA_DEFAULT_PRODUCT, imported_product_names[0])
     return RedirectResponse(url="/master-data", status_code=302)
 
 
@@ -1025,6 +1058,8 @@ def slots_list(request: Request, db: Session = Depends(get_db)):
         student_past_appointments = [appt for appt in student_all_appointments if appt.start_at < now_dt][:10]
 
     master_data_context = get_master_data_context(db)
+    product_options = master_data_context["master_data_options"]["products"]
+    product_colors = get_product_color_map(product_options)
     show_locked_slots = get_planner_setting_bool(db, PLANNER_SETTING_SHOW_LOCKED_SLOTS)
 
     return templates.TemplateResponse(
@@ -1057,6 +1092,8 @@ def slots_list(request: Request, db: Session = Depends(get_db)):
             "student_stats": student_stats,
             "student_future_appointments": student_future_appointments,
             "student_past_appointments": student_past_appointments,
+            "product_options": product_options,
+            "product_colors": product_colors,
             "master_data_defaults": {
                 "appointment_type": selected_student.appointment_type if selected_student and selected_student.appointment_type else master_data_context["master_data_defaults"]["appointment_type"],
                 "class": selected_student.training_class if selected_student and selected_student.training_class else master_data_context["master_data_defaults"]["class"],

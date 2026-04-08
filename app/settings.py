@@ -77,7 +77,7 @@ PLANNER_SETTING_DEFINITIONS = {
         "description": "Stammdatenquelle für Klassenfeld (eine Zeile = ein Eintrag).",
     },
     MASTER_DATA_PRODUCTS: {
-        "default": "Übungsfahrt\nSonderfahrt\nTestfahrt",
+        "default": "Überlandfahrt\nAutobahnfahrt\nNachtfahrt\nTestfahrt B197\nSimulator Stunde\nFehlstunde\nÜbungsfahrt\nBeleuchtungsfahrt",
         "label": "Produkte",
         "description": "Stammdatenquelle für Produktfeld (eine Zeile = ein Eintrag).",
     },

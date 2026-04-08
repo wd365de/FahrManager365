@@ -44,6 +44,15 @@
         <a class="btn btn-outline-secondary btn-sm" href="/slots?view={{ calendar_view_mode }}&day={{ today_iso }}">Heute</a>
     </div>
 </div>
+{% if product_options %}
+<div class="small text-muted d-flex flex-wrap gap-3 mb-3">
+    {% for product in product_options %}
+        <span class="product-legend-item" data-legend-color="{{ product_colors.get(product, '#64748b') }}">
+            <span class="product-legend-dot"></span>{{ product }}
+        </span>
+    {% endfor %}
+</div>
+{% endif %}
 
 <div class="card card-body mb-4 planner-header-card">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
@@ -81,8 +90,13 @@
                                     {% if day_windows %}
                                         {% for window in day_windows %}
                                             {% set booking = window_bookings.get(window.id) %}
-                                            <a class="calendar-slot{% if booking %} is-booked{% endif %}{% if selected_window and selected_window.id == window.id %} is-active{% endif %}" href="/slots?view={{ calendar_view_mode }}&day={{ calendar_anchor }}&selected_window_id={{ window.id }}&tab=bearbeiten">
+                                            {% set slot_product = booking.student.product_name if booking and booking.student and booking.student.product_name else '' %}
+                                            {% set slot_color = product_colors.get(slot_product, '#64748b') if booking else '#94a3b8' %}
+                                            <a class="calendar-slot{% if booking %} is-booked{% endif %}{% if selected_window and selected_window.id == window.id %} is-active{% endif %}" data-slot-color="{{ slot_color }}" href="/slots?view={{ calendar_view_mode }}&day={{ calendar_anchor }}&selected_window_id={{ window.id }}&tab=bearbeiten">
                                                 <div class="slot-time">{{ window.start_at.strftime('%H:%M') }} - {{ window.end_at.strftime('%H:%M') }}</div>
+                                                {% if booking and slot_product %}
+                                                    <div class="slot-product">{{ slot_product }}</div>
+                                                {% endif %}
                                                 {% if booking %}
                                                     <div class="slot-state">Belegt</div>
                                                     <div class="slot-student">{{ booking.student.user.name }}</div>
@@ -251,4 +265,23 @@
         </aside>
     </div>
 </div>
+<script>
+    document.querySelectorAll('.calendar-slot').forEach(function (slot) {
+        var color = (slot.dataset.slotColor || '').trim();
+        if (!color) {
+            return;
+        }
+        slot.style.setProperty('--slot-color', color);
+    });
+    document.querySelectorAll('.product-legend-item').forEach(function (item) {
+        var color = (item.dataset.legendColor || '').trim();
+        if (!color) {
+            return;
+        }
+        var dot = item.querySelector('.product-legend-dot');
+        if (dot) {
+            dot.style.backgroundColor = color;
+        }
+    });
+</script>
 {% endblock %}
