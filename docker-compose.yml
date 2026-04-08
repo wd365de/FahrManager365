@@ -15,6 +15,19 @@ services:
     expose:
       - "8000"
 
+  serviceterminpro-app:
+    image: hashicorp/http-echo:1.0.0
+    container_name: serviceterminpro-app
+    restart: unless-stopped
+    command: ["-listen=:8010", "-text=ServiceTerminPro placeholder - replace with real app"]
+    depends_on:
+      serviceterminpro-postgres:
+        condition: service_healthy
+    environment:
+      TZ: ${TZ}
+    expose:
+      - "8010"
+
   postgres:
     image: postgres:16-alpine
     container_name: fahrmanager-postgres
@@ -34,12 +47,32 @@ services:
       timeout: 5s
       retries: 10
 
+  serviceterminpro-postgres:
+    image: postgres:16-alpine
+    container_name: serviceterminpro-postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${SERVICEPRO_POSTGRES_USER:-serviceterminpro}
+      POSTGRES_PASSWORD: ${SERVICEPRO_POSTGRES_PASSWORD:-change-me-servicepro}
+      POSTGRES_DB: ${SERVICEPRO_POSTGRES_DB:-serviceterminpro}
+      TZ: ${TZ}
+    volumes:
+      - serviceterminpro_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SERVICEPRO_POSTGRES_USER:-serviceterminpro} -d ${SERVICEPRO_POSTGRES_DB:-serviceterminpro}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   nginx:
     image: nginx:1.27-alpine
     container_name: fahrmanager-nginx
     restart: unless-stopped
     depends_on:
       - app
+      - serviceterminpro-app
     ports:
       - "80:80"
     volumes:
@@ -47,3 +80,4 @@ services:
 
 volumes:
   postgres_data:
+  serviceterminpro_postgres_data:
