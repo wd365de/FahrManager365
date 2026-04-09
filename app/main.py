@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.auth import hash_password
 from app.database import Base, engine
 from app.database import SessionLocal
-from app.models import User
+from app.models import Student, Teacher, User
 from app.planner_settings import ensure_default_planner_settings
 from app.routes.admin_routes import router as admin_router
 from app.routes.appointments_routes import router as appointments_router
@@ -50,6 +50,59 @@ def ensure_demo_admin(db: Session) -> None:
             password_hash=hash_password("admin123"),
         )
     )
+    db.commit()
+
+
+def ensure_demo_teacher_and_students(db: Session) -> None:
+    teacher_email = "teacher.demo@fahrmanager360.local"
+    teacher_user = db.query(User).filter(User.email == teacher_email).first()
+    if not teacher_user:
+        teacher_user = User(
+            email=teacher_email,
+            name="Demo Fahrlehrer",
+            role="teacher",
+            password_hash=hash_password("demo123"),
+        )
+        db.add(teacher_user)
+        db.flush()
+
+    teacher = db.query(Teacher).filter(Teacher.user_id == teacher_user.id).first()
+    if not teacher:
+        teacher = Teacher(user_id=teacher_user.id)
+        db.add(teacher)
+        db.flush()
+
+    student_specs = [
+        ("student1.demo@fahrmanager360.local", "Test Fahrschüler 1"),
+        ("student2.demo@fahrmanager360.local", "Test Fahrschüler 2"),
+        ("student3.demo@fahrmanager360.local", "Test Fahrschüler 3"),
+    ]
+
+    for student_email, student_name in student_specs:
+        student_user = db.query(User).filter(User.email == student_email).first()
+        if not student_user:
+            student_user = User(
+                email=student_email,
+                name=student_name,
+                role="student",
+                password_hash=hash_password("demo123"),
+            )
+            db.add(student_user)
+            db.flush()
+
+        student = db.query(Student).filter(Student.user_id == student_user.id).first()
+        if not student:
+            db.add(
+                Student(
+                    user_id=student_user.id,
+                    teacher_id=teacher.id,
+                    theory_status="offen",
+                    practical_status="offen",
+                )
+            )
+        elif not student.teacher_id:
+            student.teacher_id = teacher.id
+
     db.commit()
 
 
@@ -243,6 +296,7 @@ def on_startup() -> None:
     db = SessionLocal()
     try:
         ensure_demo_admin(db)
+        ensure_demo_teacher_and_students(db)
         ensure_default_planner_settings(db)
     finally:
         db.close()
