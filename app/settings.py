@@ -17,6 +17,7 @@ MASTER_DATA_PAYMENT_METHODS = "master_data.payment_methods"
 MASTER_DATA_COURSES = "master_data.courses"
 MASTER_DATA_ISSUE_TYPES = "master_data.issue_types"
 MASTER_DATA_PRICE_LISTS = "master_data.price_lists"
+MASTER_DATA_TRAINING_CATEGORIES = "master_data.training_categories"
 MASTER_DATA_DEFAULT_APPOINTMENT_TYPE = "master_data.default_appointment_type"
 MASTER_DATA_DEFAULT_CLASS = "master_data.default_class"
 MASTER_DATA_DEFAULT_PRODUCT = "master_data.default_product"
@@ -110,6 +111,11 @@ PLANNER_SETTING_DEFINITIONS = {
         "default": "Standard\nPremium\nBusiness",
         "label": "Preislisten",
         "description": "Stammdatenquelle für Preisliste am Schüler.",
+    },
+    MASTER_DATA_TRAINING_CATEGORIES: {
+        "default": "SN|10\nÜL|5\nAB|4\nNF|3",
+        "label": "Ausbildungskategorien",
+        "description": "Format Kategorie|Zielwert (eine Zeile = ein Eintrag). Wird im Slot-Tab Ausbildung angezeigt.",
     },
     MASTER_DATA_DEFAULT_APPOINTMENT_TYPE: {
         "default": "Fahrstunde",

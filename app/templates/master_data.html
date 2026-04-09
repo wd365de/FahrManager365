@@ -81,10 +81,111 @@
             <label class="form-label">Preislisten (eine Zeile = ein Eintrag)</label>
             <textarea class="form-control" name="price_lists" rows="4">{{ master_data_raw.price_lists }}</textarea>
         </div>
+        <div class="col-lg-6">
+            <label class="form-label">Ausbildungskategorien (Format Kategorie|Zielwert)</label>
+            <textarea class="form-control" id="training_categories" name="training_categories" rows="4">{{ master_data_raw.training_categories }}</textarea>
+            {% set has_training_categories_invalid = master_data_validation.training_categories_invalid|length > 0 %}
+            <div
+                id="training_categories_invalid_feedback"
+                class="alert alert-warning mt-2 py-2 small mb-0{% if not has_training_categories_invalid %} d-none{% endif %}"
+            >
+                <div class="fw-semibold mb-1">Ungültige Zeilen (nur Format Kategorie|Zahl):</div>
+                <ul class="mb-0 ps-3" id="training_categories_invalid_list">
+                    {% if has_training_categories_invalid %}
+                        {% for invalid_row in master_data_validation.training_categories_invalid %}
+                            <li>Zeile {{ invalid_row.line }}: {{ invalid_row.raw }} ({{ invalid_row.reason }})</li>
+                        {% endfor %}
+                    {% endif %}
+                </ul>
+            </div>
+            {% if has_training_categories_invalid %}
+                <div class="form-text text-warning">Hinweis: Nur gültige Zeilen werden gespeichert.</div>
+            {% endif %}
+        </div>
     </div>
 
     <div class="mt-3">
         <button class="btn btn-primary" type="submit">Stammdaten speichern</button>
     </div>
 </form>
+
+<script>
+    (function () {
+        const trainingCategoriesField = document.getElementById("training_categories");
+        const invalidFeedback = document.getElementById("training_categories_invalid_feedback");
+        const invalidList = document.getElementById("training_categories_invalid_list");
+
+        if (!trainingCategoriesField || !invalidFeedback || !invalidList) {
+            return;
+        }
+
+        function getInvalidRows(value) {
+            const rows = value.split(/\r?\n/);
+            const invalidRows = [];
+
+            rows.forEach((rawRow, index) => {
+                const row = rawRow.trim();
+                if (!row) {
+                    return;
+                }
+
+                const separatorCount = (row.match(/\|/g) || []).length;
+                if (separatorCount !== 1) {
+                    invalidRows.push({
+                        line: index + 1,
+                        raw: rawRow,
+                        reason: "Format muss genau ein '|' enthalten",
+                    });
+                    return;
+                }
+
+                const [name, targetRaw] = row.split("|");
+                const categoryName = name.trim();
+                const targetValue = targetRaw.trim();
+
+                if (!categoryName) {
+                    invalidRows.push({
+                        line: index + 1,
+                        raw: rawRow,
+                        reason: "Kategorie fehlt",
+                    });
+                    return;
+                }
+
+                if (!/^\d+$/.test(targetValue)) {
+                    invalidRows.push({
+                        line: index + 1,
+                        raw: rawRow,
+                        reason: "Zielwert muss numerisch sein",
+                    });
+                }
+            });
+
+            return invalidRows;
+        }
+
+        function renderValidationState() {
+            const invalidRows = getInvalidRows(trainingCategoriesField.value);
+            invalidList.innerHTML = "";
+
+            if (!invalidRows.length) {
+                invalidFeedback.classList.add("d-none");
+                trainingCategoriesField.classList.remove("is-invalid");
+                return;
+            }
+
+            invalidRows.forEach((row) => {
+                const item = document.createElement("li");
+                item.textContent = `Zeile ${row.line}: ${row.raw || "(leer)"} (${row.reason})`;
+                invalidList.appendChild(item);
+            });
+
+            invalidFeedback.classList.remove("d-none");
+            trainingCategoriesField.classList.add("is-invalid");
+        }
+
+        trainingCategoriesField.addEventListener("input", renderValidationState);
+        renderValidationState();
+    })();
+</script>
 {% endblock %}

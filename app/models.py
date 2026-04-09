@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import (
     Boolean,
     Column,
@@ -134,6 +136,39 @@ class Appointment(Base):
     __table_args__ = (
         UniqueConstraint("teacher_id", "start_at", "end_at", name="uq_teacher_appointment"),
     )
+
+
+class ExamInspector(Base):
+    __tablename__ = "exam_inspectors"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(150), nullable=False)
+    organization = Column(String(150), nullable=False)
+    exam_types = Column(String(50), nullable=False, default="practical")
+    is_active = Column(Boolean, nullable=False, default=True)
+
+    registrations = relationship("ExamRegistration", back_populates="inspector")
+
+
+class ExamRegistration(Base):
+    __tablename__ = "exam_registrations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    exam_type = Column(Enum("theory", "practical", name="exam_type"), nullable=False)
+    organization = Column(String(150), nullable=False)
+    inspector_id = Column(Integer, ForeignKey("exam_inspectors.id"), nullable=True)
+    planned_date = Column(String(20), nullable=True)
+    status = Column(
+        Enum("vorgeschlagen", "angemeldet", "terminiert", "bestanden", "nicht_bestanden", name="exam_registration_status"),
+        nullable=False,
+        default="angemeldet",
+    )
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    student = relationship("Student")
+    inspector = relationship("ExamInspector", back_populates="registrations")
 
 
 class AppSetting(Base):

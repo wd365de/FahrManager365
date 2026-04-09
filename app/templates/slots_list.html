@@ -24,6 +24,11 @@
     }, 100);
 </script>
 {% endif %}
+{% if planner_feedback_message %}
+<div class="alert alert-{{ planner_feedback_level }}" role="alert">
+    {{ planner_feedback_message }}
+</div>
+{% endif %}
 <form method="post" action="/slots/settings" class="card card-body mb-4">
     <input type="hidden" name="week_start" value="{{ week_start.isoformat() }}">
     <h2 class="h6 mb-3">Kundenoptionen Terminplaner</h2>
@@ -68,9 +73,47 @@
         </div>
     </div>
 
-    <div class="planner-layout">
+    <div class="planner-layout planner-layout-single">
         <div class="planner-calendar">
-            <div class="table-responsive">
+            <div class="d-lg-none mb-2">
+                {% for day in calendar_days %}
+                    {% set day_state = namespace(has_entries=false) %}
+                    <section class="mobile-day-card">
+                        <h3>{{ day.label }}</h3>
+                        {% for teacher in teachers %}
+                            {% set day_windows = week_grid[teacher.id][day.date] %}
+                            {% if day_windows %}
+                                {% set day_state.has_entries = true %}
+                                <div class="mobile-teacher-card">
+                                    <h4>{{ teacher.user.name if teacher.user else 'Unbekannt' }}</h4>
+                                    {% for window in day_windows %}
+                                        {% set booking = window_bookings.get(window.id) %}
+                                        {% set slot_product = booking.student.product_name if booking and booking.student and booking.student.product_name else '' %}
+                                        {% set slot_color = product_colors.get(slot_product, '#dc2626') if booking else '#0ea5e9' %}
+                                        <a class="calendar-slot mobile-slot-card{% if booking %} is-booked{% endif %}{% if selected_window and selected_window.id == window.id %} is-active{% endif %}" data-slot-color="{{ slot_color }}" href="/slots?view={{ calendar_view_mode }}&day={{ calendar_anchor }}&selected_window_id={{ window.id }}&tab=bearbeiten">
+                                            <div class="slot-time">{{ window.start_at.strftime('%H:%M') }} - {{ window.end_at.strftime('%H:%M') }}</div>
+                                            {% if booking and slot_product %}
+                                                <div class="slot-product">{{ slot_product }}</div>
+                                            {% endif %}
+                                            {% if booking %}
+                                                <div class="slot-state">Belegt</div>
+                                                <div class="slot-student">{{ booking.student.user.name if booking.student and booking.student.user else 'Unbekannt' }}</div>
+                                            {% else %}
+                                                <div class="slot-state text-muted">Frei</div>
+                                            {% endif %}
+                                        </a>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                        {% if not day_state.has_entries %}
+                            <div class="small text-muted">Keine Slots vorhanden.</div>
+                        {% endif %}
+                    </section>
+                {% endfor %}
+            </div>
+
+            <div class="table-responsive d-none d-lg-block">
                 <table class="table table-sm table-bordered align-middle">
                     <thead>
                     <tr>
@@ -83,7 +126,7 @@
                     <tbody>
                     {% for teacher in teachers %}
                         <tr>
-                            <td><strong>{{ teacher.user.name }}</strong></td>
+                            <td><strong>{{ teacher.user.name if teacher.user else 'Unbekannt' }}</strong></td>
                             {% for day in calendar_days %}
                                 <td>
                                     {% set day_windows = week_grid[teacher.id][day.date] %}
@@ -91,7 +134,7 @@
                                         {% for window in day_windows %}
                                             {% set booking = window_bookings.get(window.id) %}
                                             {% set slot_product = booking.student.product_name if booking and booking.student and booking.student.product_name else '' %}
-                                            {% set slot_color = product_colors.get(slot_product, '#64748b') if booking else '#94a3b8' %}
+                                            {% set slot_color = product_colors.get(slot_product, '#dc2626') if booking else '#0ea5e9' %}
                                             <a class="calendar-slot{% if booking %} is-booked{% endif %}{% if selected_window and selected_window.id == window.id %} is-active{% endif %}" data-slot-color="{{ slot_color }}" href="/slots?view={{ calendar_view_mode }}&day={{ calendar_anchor }}&selected_window_id={{ window.id }}&tab=bearbeiten">
                                                 <div class="slot-time">{{ window.start_at.strftime('%H:%M') }} - {{ window.end_at.strftime('%H:%M') }}</div>
                                                 {% if booking and slot_product %}
@@ -99,7 +142,7 @@
                                                 {% endif %}
                                                 {% if booking %}
                                                     <div class="slot-state">Belegt</div>
-                                                    <div class="slot-student">{{ booking.student.user.name }}</div>
+                                                    <div class="slot-student">{{ booking.student.user.name if booking.student and booking.student.user else 'Unbekannt' }}</div>
                                                 {% else %}
                                                     <div class="slot-state text-muted">Frei</div>
                                                 {% endif %}
@@ -116,10 +159,20 @@
                 </table>
             </div>
         </div>
+    </div>
 
-        <aside class="planner-detail-panel">
-            {% if selected_window %}
-                <h3 class="h5 mb-2">Fahrstunde</h3>
+    {% if not selected_window %}
+        <p class="small text-muted mt-2 mb-0">Klicke auf einen Slot, um die Details als Overlay zu öffnen.</p>
+    {% endif %}
+
+    {% if selected_window %}
+        <div class="slot-detail-overlay-backdrop" data-close-href="/slots?view={{ calendar_view_mode }}&day={{ calendar_anchor }}">
+            <aside class="planner-detail-panel slot-detail-overlay" role="dialog" aria-modal="true" aria-label="Fahrstunde Details">
+                <div class="slot-detail-overlay-header">
+                    <h3 class="h5 mb-0">Fahrstunde</h3>
+                    <a class="btn btn-sm btn-outline-secondary" href="/slots?view={{ calendar_view_mode }}&day={{ calendar_anchor }}">Schließen</a>
+                </div>
+
                 <div class="btn-group btn-group-sm mb-3 w-100" role="group">
                     <a class="btn {% if selected_tab == 'bearbeiten' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="/slots?view={{ calendar_view_mode }}&day={{ calendar_anchor }}&selected_window_id={{ selected_window.id }}&tab=bearbeiten">Bearbeiten</a>
                     <a class="btn {% if selected_tab == 'ausbildung' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="/slots?view={{ calendar_view_mode }}&day={{ calendar_anchor }}&selected_window_id={{ selected_window.id }}&tab=ausbildung">Ausbildung</a>
@@ -127,57 +180,79 @@
                 </div>
 
                 {% if selected_tab == 'bearbeiten' %}
-                    <div class="detail-form-grid">
-                        <div class="detail-field full">
-                            <label>Terminart *</label>
-                            <input class="form-control form-control-sm" value="{{ master_data_defaults.appointment_type }}" readonly>
-                        </div>
-                        <div class="detail-field full">
-                            <label>Benutzer *</label>
-                            <input class="form-control form-control-sm" value="{{ selected_window.teacher.user.name }}" readonly>
-                        </div>
-                        <div class="detail-field">
-                            <label>Kunde *</label>
-                            <input class="form-control form-control-sm" value="{% if selected_booking %}{{ selected_booking.student.user.name }}{% else %}-{% endif %}" readonly>
-                        </div>
-                        <div class="detail-field">
-                            <label>Klasse *</label>
-                            <input class="form-control form-control-sm" value="{{ master_data_defaults.class }}" readonly>
-                        </div>
-                        <div class="detail-field">
-                            <label>Datum *</label>
-                            <input class="form-control form-control-sm" value="{{ selected_window.start_at.strftime('%d.%m.%Y') }}" readonly>
-                        </div>
-                        <div class="detail-field">
-                            <label>Produkt *</label>
-                            <input class="form-control form-control-sm" value="{{ master_data_defaults.product }}" readonly>
-                        </div>
-                        <div class="detail-field">
-                            <label>Uhrzeit *</label>
-                            <input class="form-control form-control-sm" value="{{ selected_window.start_at.strftime('%H:%M') }}" readonly>
-                        </div>
-                        <div class="detail-field">
-                            <label>Minuten *</label>
-                            <input class="form-control form-control-sm" value="{{ ((selected_window.end_at - selected_window.start_at).total_seconds() // 60)|int }}" readonly>
-                        </div>
-                        <div class="detail-field">
-                            <label>Fahrzeug *</label>
-                            <input class="form-control form-control-sm" value="{{ master_data_defaults.vehicle }}" readonly>
-                        </div>
-                        <div class="detail-field">
-                            <label>gefahrene km</label>
-                            <input class="form-control form-control-sm" value="-" readonly>
-                        </div>
-                        <div class="detail-field full">
-                            <label>Notiz</label>
-                            <textarea class="form-control form-control-sm" rows="2" readonly>{% if selected_student and selected_student.notes %}{{ selected_student.notes }}{% else %}Fahrschule{% endif %}</textarea>
-                        </div>
-                        <div class="detail-field full small text-muted">
-                            <strong>Gebucht am:</strong> {% if selected_booking %}Termin-ID {{ selected_booking.id }}{% else %}-{% endif %}
-                        </div>
-                    </div>
-
                     {% if not selected_booking %}
+                        <div class="detail-form-grid">
+                            <div class="detail-field full">
+                                <label>Terminart *</label>
+                                <input class="form-control form-control-sm" value="{{ master_data_defaults.appointment_type }}" readonly>
+                            </div>
+                            <div class="detail-field full">
+                                <label>Benutzer *</label>
+                                <input class="form-control form-control-sm" value="{{ selected_window.teacher.user.name if selected_window.teacher and selected_window.teacher.user else 'Unbekannt' }}" readonly>
+                            </div>
+                            <div class="detail-field">
+                                <label>Kunde *</label>
+                                <input class="form-control form-control-sm" value="-" readonly>
+                            </div>
+                            <div class="detail-field">
+                                <label>Klasse *</label>
+                                <input class="form-control form-control-sm" value="{{ master_data_defaults.class }}" readonly>
+                            </div>
+                            <div class="detail-field">
+                                <label>Datum *</label>
+                                <input class="form-control form-control-sm" value="{{ selected_window.start_at.strftime('%d.%m.%Y') }}" readonly>
+                            </div>
+                            <div class="detail-field">
+                                <label>Produkt *</label>
+                                <input class="form-control form-control-sm" value="{{ master_data_defaults.product }}" readonly>
+                            </div>
+                            <div class="detail-field">
+                                <label>Uhrzeit *</label>
+                                <input class="form-control form-control-sm" value="{{ selected_window.start_at.strftime('%H:%M') }}" readonly>
+                            </div>
+                            <div class="detail-field">
+                                <label>Minuten *</label>
+                                <input class="form-control form-control-sm" value="{{ ((selected_window.end_at - selected_window.start_at).total_seconds() // 60)|int }}" readonly>
+                            </div>
+                            <div class="detail-field">
+                                <label>Fahrzeug *</label>
+                                <input class="form-control form-control-sm" value="{{ master_data_defaults.vehicle }}" readonly>
+                            </div>
+                            <div class="detail-field">
+                                <label>gefahrene km</label>
+                                <input class="form-control form-control-sm" value="-" readonly>
+                            </div>
+                        </div>
+
+                        <div class="small fw-semibold mb-2">Termin im Planer einfügen</div>
+                        {% if selected_window_students %}
+                            <form method="post" action="/slots/{{ selected_window.id }}/appointments/create" class="row g-2 mb-3">
+                                <input type="hidden" name="week_start" value="{{ week_start.isoformat() }}">
+                                <input type="hidden" name="view" value="{{ calendar_view_mode }}">
+                                <input type="hidden" name="day" value="{{ calendar_anchor }}">
+                                <input type="hidden" name="selected_window_id" value="{{ selected_window.id }}">
+
+                                <div class="col-12">
+                                    <label class="form-label form-label-sm mb-1">Fahrschüler</label>
+                                    <select class="form-select form-select-sm" name="student_id" required>
+                                        <option value="">Bitte auswählen</option>
+                                        {% for item in selected_window_students %}
+                                            <option value="{{ item.id }}">{{ item.user.name if item.user else ('Schüler #' ~ item.id) }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label form-label-sm mb-1">Notiz (optional)</label>
+                                    <textarea class="form-control form-control-sm" name="request_message" rows="2" placeholder="z. B. Sonderfahrt / Hinweis"></textarea>
+                                </div>
+                                <div class="col-12">
+                                    <button class="btn btn-success btn-sm w-100" type="submit">Termin einfügen</button>
+                                </div>
+                            </form>
+                        {% else %}
+                            <div class="small text-muted mb-3">Keine passenden Fahrschüler für diesen Fahrlehrer gefunden.</div>
+                        {% endif %}
+
                         <form method="post" action="/slots/{{ selected_window.id }}/update" class="row g-2 mb-2">
                             <input type="hidden" name="week_start" value="{{ week_start.isoformat() }}">
                             <input type="hidden" name="view" value="{{ calendar_view_mode }}">
@@ -207,7 +282,99 @@
                             <button class="btn btn-danger btn-sm w-100" type="submit">Löschen</button>
                         </form>
                     {% else %}
-                        <div class="alert alert-warning py-2 small">Slot ist belegt und kann nicht verschoben/gelöscht werden.</div>
+                        <form method="post" action="/slots/appointments/{{ selected_booking.id }}/details" class="row g-2 mb-3">
+                            <input type="hidden" name="week_start" value="{{ week_start.isoformat() }}">
+                            <input type="hidden" name="view" value="{{ calendar_view_mode }}">
+                            <input type="hidden" name="day" value="{{ calendar_anchor }}">
+                            <input type="hidden" name="selected_window_id" value="{{ selected_window.id }}">
+
+                            <div class="detail-form-grid mb-0">
+                                <div class="detail-field full">
+                                    <label>Fahrlehrer *</label>
+                                    <input class="form-control form-control-sm" value="{{ selected_booking.teacher.user.name if selected_booking.teacher and selected_booking.teacher.user else 'Unbekannt' }}" readonly>
+                                </div>
+                                <div class="detail-field">
+                                    <label>Kunde *</label>
+                                    <input class="form-control form-control-sm" value="{{ selected_booking.student.user.name if selected_booking.student and selected_booking.student.user else 'Unbekannt' }}" readonly>
+                                </div>
+                                <div class="detail-field">
+                                    <label>Datum *</label>
+                                    <input class="form-control form-control-sm" value="{{ selected_booking.start_at.strftime('%d.%m.%Y') }}" readonly>
+                                </div>
+                                <div class="detail-field">
+                                    <label>Uhrzeit *</label>
+                                    <input class="form-control form-control-sm" value="{{ selected_booking.start_at.strftime('%H:%M') }}" readonly>
+                                </div>
+                                <div class="detail-field">
+                                    <label>Minuten *</label>
+                                    <input class="form-control form-control-sm" value="{{ selected_booking.duration_min }}" readonly>
+                                </div>
+                                <div class="detail-field">
+                                    <label>Terminart *</label>
+                                    <select class="form-select form-select-sm" name="appointment_type">
+                                        {% for item in master_data_options.appointment_types %}
+                                            <option value="{{ item }}" {% if item == master_data_defaults.appointment_type %}selected{% endif %}>{{ item }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="detail-field">
+                                    <label>Klasse *</label>
+                                    <select class="form-select form-select-sm" name="training_class">
+                                        {% for item in master_data_options.classes %}
+                                            <option value="{{ item }}" {% if item == master_data_defaults.class %}selected{% endif %}>{{ item }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="detail-field">
+                                    <label>Produkt *</label>
+                                    <select class="form-select form-select-sm" name="product_name">
+                                        {% for item in master_data_options.products %}
+                                            <option value="{{ item }}" {% if item == master_data_defaults.product %}selected{% endif %}>{{ item }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="detail-field">
+                                    <label>Fahrzeug *</label>
+                                    <select class="form-select form-select-sm" name="vehicle_name">
+                                        {% for item in master_data_options.vehicles %}
+                                            <option value="{{ item }}" {% if item == master_data_defaults.vehicle %}selected{% endif %}>{{ item }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="detail-field full">
+                                    <label>Notiz</label>
+                                    <textarea class="form-control form-control-sm" name="notes" rows="2">{{ selected_student.notes if selected_student and selected_student.notes else '' }}</textarea>
+                                </div>
+                                <div class="detail-field full small text-muted">
+                                    <strong>Termin-ID:</strong> {{ selected_booking.id }}
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <button class="btn btn-outline-primary btn-sm w-100" type="submit">Details speichern</button>
+                            </div>
+                        </form>
+
+                        <div class="small fw-semibold mb-2">Termin verschieben (inkl. Fahrlehrerwechsel)</div>
+                        <div class="small text-muted mb-2">Es werden passende freie Slots mit gleicher Dauer vorgeschlagen.</div>
+                        <div class="mb-3">
+                            {% for option in alternative_windows %}
+                                <form method="post" action="/slots/appointments/{{ selected_booking.id }}/reschedule" class="d-flex justify-content-between align-items-center gap-2 border rounded p-2 mb-2">
+                                    <input type="hidden" name="week_start" value="{{ week_start.isoformat() }}">
+                                    <input type="hidden" name="view" value="{{ calendar_view_mode }}">
+                                    <input type="hidden" name="day" value="{{ calendar_anchor }}">
+                                    <input type="hidden" name="target_window_id" value="{{ option.window_id }}">
+                                    <div class="small">
+                                        <div><strong>{{ option.start_at.strftime('%d.%m.%Y %H:%M') }}</strong> – {{ option.end_at.strftime('%H:%M') }}</div>
+                                        <div class="text-muted">{{ option.teacher_name }}</div>
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-primary" type="submit">Verschieben</button>
+                                </form>
+                            {% else %}
+                                <div class="small text-muted">Keine passenden Alternativtermine gefunden.</div>
+                            {% endfor %}
+                        </div>
+
                         <form method="post" action="/slots/appointments/{{ selected_booking.id }}/cancel" onsubmit="return confirm('Termin wirklich stornieren?');">
                             <input type="hidden" name="view" value="{{ calendar_view_mode }}">
                             <input type="hidden" name="day" value="{{ calendar_anchor }}">
@@ -224,10 +391,9 @@
                             <tr><th>Theorie G</th><td>{{ '12:00 / 12' if selected_student.theory_status == 'bestanden' else '00:00 / 12' }}</td></tr>
                             <tr><th>Theorie ZS</th><td>02:00 / 2</td></tr>
                             <tr><th>Üstd.</th><td>{{ student_stats.appointments_booked }} Std</td></tr>
-                            <tr><th>SN</th><td>0 / 10</td></tr>
-                            <tr><th>ÜL</th><td>0 / 5</td></tr>
-                            <tr><th>AB</th><td>0 / 4</td></tr>
-                            <tr><th>NF</th><td>0 / 3</td></tr>
+                            {% for category in master_data_options.training_categories %}
+                                <tr><th>{{ category.name }}</th><td>0 / {{ category.target }}</td></tr>
+                            {% endfor %}
                             <tr><th>And.</th><td>{{ student_stats.appointments_done }}</td></tr>
                             <tr><th>Testfahrt</th><td>{{ 1 if student_stats.appointments_done > 0 else 0 }} / 1</td></tr>
                             <tr><th>Fehlstd.</th><td>{{ student_stats.appointments_cancelled }}</td></tr>
@@ -241,7 +407,7 @@
                         <div class="small fw-semibold mb-1">Folgetermine</div>
                         <ul class="small ps-3">
                             {% for appt in student_future_appointments %}
-                                <li>{{ appt.start_at.strftime('%d.%m %H:%M') }} · {{ appt.teacher.user.name }}</li>
+                                <li>{{ appt.start_at.strftime('%d.%m %H:%M') }} · {{ appt.teacher.user.name if appt.teacher and appt.teacher.user else 'Unbekannt' }}</li>
                             {% else %}
                                 <li class="text-muted">Keine Folgetermine.</li>
                             {% endfor %}
@@ -258,12 +424,9 @@
                         <div class="small text-muted">Kein Fahrschüler an diesem Slot hinterlegt.</div>
                     {% endif %}
                 {% endif %}
-            {% else %}
-                <h3 class="h6">Slot auswählen</h3>
-                <p class="small text-muted mb-0">Klicke im Kalender auf einen Slot, um rechts Details zu sehen.</p>
-            {% endif %}
-        </aside>
-    </div>
+            </aside>
+        </div>
+    {% endif %}
 </div>
 <script>
     document.querySelectorAll('.calendar-slot').forEach(function (slot) {
@@ -283,5 +446,18 @@
             dot.style.backgroundColor = color;
         }
     });
+
+    var overlay = document.querySelector('.slot-detail-overlay-backdrop');
+    if (overlay) {
+        overlay.addEventListener('click', function (event) {
+            if (event.target !== overlay) {
+                return;
+            }
+            var closeHref = overlay.dataset.closeHref;
+            if (closeHref) {
+                window.location.href = closeHref;
+            }
+        });
+    }
 </script>
 {% endblock %}

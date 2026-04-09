@@ -57,15 +57,47 @@
 <div class="row g-4">
     <div class="col-12">
         <h2 class="h5">Meine Termine</h2>
-        <table class="table table-striped table-bordered">
-            <thead><tr><th>Fahrlehrer</th><th>Start</th><th>Ende</th><th>Status</th><th>Aktion</th></tr></thead>
-            <tbody>
+        <div class="d-none d-md-block">
+            <table class="table table-striped table-bordered">
+                <thead><tr><th>Fahrlehrer</th><th>Start</th><th>Ende</th><th>Status</th><th>Aktion</th></tr></thead>
+                <tbody>
+                {% for appointment in appointments %}
+                    <tr>
+                        <td>{{ appointment.teacher.user.name }}</td>
+                        <td>{{ appointment.start_at }}</td>
+                        <td>{{ appointment.end_at }}</td>
+                        <td>
+                            {% if appointment.status == 'booked' and appointment.requires_teacher_confirmation %}
+                                angefragt
+                            {% elif appointment.status == 'booked' %}
+                                bestätigt
+                            {% else %}
+                                {{ appointment.status }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if appointment.status == 'booked' %}
+                                <form method="post" action="/appointments/{{ appointment.id }}/cancel">
+                                    <button class="btn btn-sm btn-warning" type="submit">Stornieren</button>
+                                </form>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="5">Noch keine Termine gebucht.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="d-md-none mb-3">
             {% for appointment in appointments %}
-                <tr>
-                    <td>{{ appointment.teacher.user.name }}</td>
-                    <td>{{ appointment.start_at }}</td>
-                    <td>{{ appointment.end_at }}</td>
-                    <td>
+                <div class="mobile-appointment-card">
+                    <div class="small fw-semibold">{{ appointment.teacher.user.name }}</div>
+                    <div class="small text-muted">{{ appointment.start_at }} – {{ appointment.end_at }}</div>
+                    <div class="small mt-1 mb-2">
                         {% if appointment.status == 'booked' and appointment.requires_teacher_confirmation %}
                             angefragt
                         {% elif appointment.status == 'booked' %}
@@ -73,22 +105,17 @@
                         {% else %}
                             {{ appointment.status }}
                         {% endif %}
-                    </td>
-                    <td>
-                        {% if appointment.status == 'booked' %}
-                            <form method="post" action="/appointments/{{ appointment.id }}/cancel">
-                                <button class="btn btn-sm btn-warning" type="submit">Stornieren</button>
-                            </form>
-                        {% else %}
-                            -
-                        {% endif %}
-                    </td>
-                </tr>
+                    </div>
+                    {% if appointment.status == 'booked' %}
+                        <form method="post" action="/appointments/{{ appointment.id }}/cancel">
+                            <button class="btn btn-sm btn-warning w-100" type="submit">Stornieren</button>
+                        </form>
+                    {% endif %}
+                </div>
             {% else %}
-                <tr><td colspan="5">Noch keine Termine gebucht.</td></tr>
+                <div class="small text-muted">Noch keine Termine gebucht.</div>
             {% endfor %}
-            </tbody>
-        </table>
+        </div>
 
         <div class="card card-body mt-4">
             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -123,13 +150,39 @@
                 </div>
             </form>
 
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="portal-week-nav mb-3">
                 <a class="btn btn-outline-secondary btn-sm" href="/portal?week_start={{ prev_week_start }}{% if selected_duration %}&duration_min={{ selected_duration }}{% endif %}{% if selected_daypart %}&daypart={{ selected_daypart }}{% endif %}">← Vorwoche</a>
-                <strong>{{ week_days[0].label }} – {{ week_days[6].label }}</strong>
+                <span class="portal-week-range">{{ week_days[0].label }} – {{ week_days[6].label }}</span>
                 <a class="btn btn-outline-secondary btn-sm" href="/portal?week_start={{ next_week_start }}{% if selected_duration %}&duration_min={{ selected_duration }}{% endif %}{% if selected_daypart %}&daypart={{ selected_daypart }}{% endif %}">Folgewoche →</a>
             </div>
 
-            <div class="table-responsive">
+            <div class="d-lg-none mb-2">
+                {% for day in week_days %}
+                    {% set options = options_by_day[day.date] %}
+                    <section class="mobile-booking-day">
+                        <h3>{{ day.label }}</h3>
+                        {% if options %}
+                            {% for option in options %}
+                                <form method="post" action="/appointments/book" class="mobile-request-form mobile-slot-card">
+                                    <div class="small mb-1"><strong>{{ option.start_at.strftime('%H:%M') }} - {{ option.end_at.strftime('%H:%M') }}</strong></div>
+                                    <div class="small text-muted mb-2">{{ option.duration_min }} min</div>
+                                    <input type="hidden" name="window_id" value="{{ option.window_id }}">
+                                    <input type="hidden" name="start_at" value="{{ option.start_iso }}">
+                                    <input type="hidden" name="duration_min" value="{{ option.duration_min }}">
+                                    <textarea class="form-control form-control-sm mb-2" name="request_message" rows="2" placeholder="Anfrage (optional)"></textarea>
+                                    <button class="btn btn-sm btn-success w-100" type="submit" {% if not option.can_submit_now %}disabled{% endif %}>
+                                        {% if option.booking_mode == 'request' %}Anfragen{% else %}Buchen{% endif %}
+                                    </button>
+                                </form>
+                            {% endfor %}
+                        {% else %}
+                            <span class="text-muted small">Keine Optionen</span>
+                        {% endif %}
+                    </section>
+                {% endfor %}
+            </div>
+
+            <div class="table-responsive d-none d-lg-block">
                 <table class="table table-sm table-bordered align-middle">
                     <thead>
                     <tr>

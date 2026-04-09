@@ -1,0 +1,601 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .onboarding-card {
+        background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+        border: 1px solid #dbe8f8;
+    }
+
+    .onboarding-progress-track {
+        height: 0.65rem;
+        border-radius: 999px;
+        background: #e6eef8;
+        overflow: hidden;
+    }
+
+    .onboarding-progress-fill {
+        height: 100%;
+        width: 0;
+        background: linear-gradient(90deg, #0ea5e9 0%, #2563eb 100%);
+        transition: width 0.25s ease;
+    }
+
+    .onboarding-step {
+        display: none;
+    }
+
+    .onboarding-step.active {
+        display: block;
+    }
+
+    .onboarding-step-title {
+        font-size: 1rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+
+    .onboarding-step-subtitle {
+        font-size: 0.9rem;
+        color: #6b7280;
+        margin-bottom: 1rem;
+    }
+</style>
+
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+    <h1 class="h4 mb-0">Onboarding Wizard</h1>
+    <a class="btn btn-outline-secondary btn-sm" href="/students">Zur Schülerliste</a>
+</div>
+
+{% if error %}
+    <div class="alert alert-danger">
+        <div>{{ error }}</div>
+        {% if field_errors %}
+            <ul class="mb-0 mt-2">
+                {% for field_label in field_errors %}
+                    <li>{{ field_label }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+{% endif %}
+
+<form method="post" action="/onboarding" class="card card-body onboarding-card" id="onboarding-form" novalidate>
+    {% set values = form_values if form_values else {} %}
+
+    <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="small text-muted" id="onboarding-step-label">Schritt 1 von 4</div>
+            <div class="small fw-semibold" id="onboarding-step-name">Account & Zuordnung</div>
+        </div>
+        <div class="onboarding-progress-track">
+            <div class="onboarding-progress-fill" id="onboarding-progress-fill"></div>
+        </div>
+    </div>
+
+    <div class="onboarding-step active" data-wizard-step="1" data-step-name="Account & Zuordnung">
+        <div class="onboarding-step-title">Schritt 1: Basisdaten</div>
+        <div class="onboarding-step-subtitle">Wer ist der Fahrschüler und welchem Fahrlehrer wird er zugeordnet?</div>
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Anrede *</label>
+                {% set selected_salutation = values.salutation if values.salutation is defined else '' %}
+                <select class="form-select" name="salutation" required>
+                    <option value="">Bitte wählen</option>
+                    <option value="Herr" {% if selected_salutation == 'Herr' %}selected{% endif %}>Herr</option>
+                    <option value="Frau" {% if selected_salutation == 'Frau' %}selected{% endif %}>Frau</option>
+                    <option value="Divers" {% if selected_salutation == 'Divers' %}selected{% endif %}>Divers</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Vorname *</label>
+                <input class="form-control" name="first_name" value="{{ values.first_name if values.first_name is defined else '' }}" required>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label">Nachname *</label>
+                <input class="form-control" name="last_name" value="{{ values.last_name if values.last_name is defined else '' }}" required>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label">E-Mail *</label>
+                <input class="form-control" type="email" name="email" value="{{ values.email if values.email is defined else '' }}" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Start-Passwort *</label>
+                <input class="form-control" type="password" name="password" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Fester Fahrlehrer *</label>
+                <select class="form-select" name="teacher_id" required>
+                    <option value="">Bitte wählen</option>
+                    {% for teacher in teachers %}
+                        <option value="{{ teacher.id }}" {% if (selected_teacher_id and selected_teacher_id == teacher.id) or (values.teacher_id is defined and values.teacher_id == teacher.id|string) %}selected{% endif %}>{{ teacher.user.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="onboarding-step" data-wizard-step="2" data-step-name="Person & Kontakt">
+        <div class="onboarding-step-title">Schritt 2: Personendaten und Kontakt</div>
+        <div class="onboarding-step-subtitle">Damit die Stammdaten vollständig sind, erfassen wir hier die Kontaktdetails.</div>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Geburtsdatum *</label>
+                <input class="form-control" type="date" name="birth_date" value="{{ values.birth_date if values.birth_date is defined else '' }}" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Geburtsort *</label>
+                <input class="form-control" name="birth_place" pattern="[A-Za-zÄÖÜäöüß\-\s]{2,}" title="Geburtsort muss mindestens 2 Buchstaben enthalten" value="{{ values.birth_place if values.birth_place is defined else '' }}" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Staatsangehörigkeit *</label>
+                {% set selected_citizenship = values.citizenship_country if values.citizenship_country is defined else '' %}
+                <select class="form-select" name="citizenship_country" required>
+                    <option value="">Bitte wählen</option>
+                    {% for country in ['Deutschland', 'Österreich', 'Schweiz', 'Türkei', 'Polen', 'Italien', 'Kroatien', 'Rumänien', 'Ukraine', 'Syrien'] %}
+                        <option value="{{ country }}" {% if selected_citizenship == country %}selected{% endif %}>{{ country }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">PLZ *</label>
+                <input class="form-control" name="postal_code" inputmode="numeric" maxlength="5" pattern="\d{5}" title="Bitte 5-stellige PLZ eingeben" value="{{ values.postal_code if values.postal_code is defined else '' }}" required>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label">Ort *</label>
+                <input class="form-control" name="city" list="onboarding-city-suggestions" pattern="[A-Za-zÄÖÜäöüß\-\s]{2,}" title="Ort muss mindestens 2 Buchstaben enthalten" value="{{ values.city if values.city is defined else '' }}" required>
+                <datalist id="onboarding-city-suggestions"></datalist>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Straße *</label>
+                <input class="form-control" name="street" minlength="3" title="Straße muss mindestens 3 Zeichen lang sein" value="{{ values.street if values.street is defined else '' }}" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Nr. *</label>
+                <input class="form-control" name="house_number" value="{{ values.house_number if values.house_number is defined else '' }}" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Mobil *</label>
+                <input class="form-control" name="mobile_phone" value="{{ values.mobile_phone if values.mobile_phone is defined else '' }}" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Telefon privat</label>
+                <input class="form-control" name="phone_private" value="{{ values.phone_private if values.phone_private is defined else '' }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Telefon beruflich</label>
+                <input class="form-control" name="phone_work" value="{{ values.phone_work if values.phone_work is defined else '' }}">
+            </div>
+        </div>
+    </div>
+
+    <div class="onboarding-step" data-wizard-step="3" data-step-name="Ausbildung">
+        <div class="onboarding-step-title">Schritt 3: Ausbildung</div>
+        <div class="onboarding-step-subtitle">Hier legen wir Ausbildungsweg, Kurs und aktuellen Lernstand fest.</div>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Klasse *</label>
+                {% set selected_training_class = values.training_class if values.training_class is defined else master_data_defaults.class %}
+                <select class="form-select" name="training_class" required>
+                    <option value="">Bitte wählen</option>
+                    {% for item in master_data_options.classes %}
+                        <option value="{{ item }}" {% if selected_training_class == item %}selected{% endif %}>{{ item }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Erteilungsart *</label>
+                {% set selected_issue_type = values.issue_type if values.issue_type is defined else '' %}
+                <select class="form-select" name="issue_type" required>
+                    <option value="">Bitte wählen</option>
+                    {% for item in master_data_options.issue_types %}
+                        <option value="{{ item }}" {% if selected_issue_type == item %}selected{% endif %}>{{ item }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Anmeldedatum *</label>
+                <input class="form-control" type="date" name="enrollment_date" value="{{ values.enrollment_date if values.enrollment_date is defined else '' }}" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Kurs *</label>
+                {% set selected_course = values.course_name if values.course_name is defined else '' %}
+                <select class="form-select" name="course_name" required>
+                    <option value="">Bitte wählen</option>
+                    {% for item in master_data_options.courses %}
+                        <option value="{{ item }}" {% if selected_course == item %}selected{% endif %}>{{ item }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Theorie</label>
+                {% set selected_theory = values.theory_status if values.theory_status is defined else 'offen' %}
+                <select class="form-select" name="theory_status">
+                    <option value="offen" {% if selected_theory == 'offen' %}selected{% endif %}>offen</option>
+                    <option value="bestanden" {% if selected_theory == 'bestanden' %}selected{% endif %}>bestanden</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Praxis</label>
+                {% set selected_practical = values.practical_status if values.practical_status is defined else 'offen' %}
+                <select class="form-select" name="practical_status">
+                    <option value="offen" {% if selected_practical == 'offen' %}selected{% endif %}>offen</option>
+                    <option value="laeuft" {% if selected_practical == 'laeuft' %}selected{% endif %}>läuft</option>
+                    <option value="bestanden" {% if selected_practical == 'bestanden' %}selected{% endif %}>bestanden</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Terminart</label>
+                {% set selected_appointment_type = values.appointment_type if values.appointment_type is defined else master_data_defaults.appointment_type %}
+                <select class="form-select" name="appointment_type">
+                    <option value="">Bitte wählen</option>
+                    {% for item in master_data_options.appointment_types %}
+                        <option value="{{ item }}" {% if selected_appointment_type == item %}selected{% endif %}>{{ item }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Fahrzeug</label>
+                {% set selected_vehicle = values.vehicle_name if values.vehicle_name is defined else master_data_defaults.vehicle %}
+                <select class="form-select" name="vehicle_name">
+                    <option value="">Bitte wählen</option>
+                    {% for item in master_data_options.vehicles %}
+                        <option value="{{ item }}" {% if selected_vehicle == item %}selected{% endif %}>{{ item }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Schlüsselzahl</label>
+                <input class="form-control" name="license_key_number" value="{{ values.license_key_number if values.license_key_number is defined else '' }}">
+            </div>
+            <div class="col-12">
+                <div class="form-check form-switch">
+                    <input type="hidden" name="bf17_enabled" value="0">
+                    {% set bf17_checked = (values.bf17_enabled if values.bf17_enabled is defined else false) %}
+                    <input class="form-check-input" type="checkbox" role="switch" id="wizard-bf17" name="bf17_enabled" value="1" {% if bf17_checked in [true, '1', 'true', 'on', 'yes'] %}checked{% endif %}>
+                    <label class="form-check-label" for="wizard-bf17">BF17 aktiviert</label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="onboarding-step" data-wizard-step="4" data-step-name="Prüfung & Zahlung">
+        <div class="onboarding-step-title">Schritt 4: Prüfung, Zahlung und Abschluss</div>
+        <div class="onboarding-step-subtitle">Zum Abschluss die prüfungsrelevanten und kaufmännischen Angaben.</div>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Filiale Prüfort *</label>
+                <input class="form-control" name="branch_exam_location" value="{{ values.branch_exam_location if values.branch_exam_location is defined else '' }}" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Prüforganisation *</label>
+                <input class="form-control" name="exam_organization" value="{{ values.exam_organization if values.exam_organization is defined else '' }}" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Preisliste *</label>
+                {% set selected_price_list = values.price_list if values.price_list is defined else '' %}
+                <select class="form-select" name="price_list" required>
+                    <option value="">Bitte wählen</option>
+                    {% for item in master_data_options.price_lists %}
+                        <option value="{{ item }}" {% if selected_price_list == item %}selected{% endif %}>{{ item }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Zahlungsart *</label>
+                {% set selected_payment_method = values.payment_method if values.payment_method is defined else '' %}
+                <select class="form-select" name="payment_method" required>
+                    <option value="">Bitte wählen</option>
+                    {% for item in master_data_options.payment_methods %}
+                        <option value="{{ item }}" {% if selected_payment_method == item %}selected{% endif %}>{{ item }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Kostenträger *</label>
+                {% set selected_cost_bearer = values.cost_bearer if values.cost_bearer is defined else 'keine' %}
+                <select class="form-select" name="cost_bearer" required>
+                    <option value="keine" {% if selected_cost_bearer == 'keine' %}selected{% endif %}>keine</option>
+                    <option value="firma" {% if selected_cost_bearer == 'firma' %}selected{% endif %}>Firma</option>
+                    <option value="rechnungsanschrift" {% if selected_cost_bearer == 'rechnungsanschrift' %}selected{% endif %}>Rechnungsanschrift</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Produkt</label>
+                {% set selected_product = values.product_name if values.product_name is defined else master_data_defaults.product %}
+                <select class="form-select" name="product_name">
+                    <option value="">Bitte wählen</option>
+                    {% for item in master_data_options.products %}
+                        <option value="{{ item }}" {% if selected_product == item %}selected{% endif %}>{{ item }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-12 col-lg-6 d-flex align-items-end">
+                <div class="form-check form-switch">
+                    <input type="hidden" name="has_visual_aid" value="0">
+                    {% set visual_aid_checked = (values.has_visual_aid if values.has_visual_aid is defined else false) %}
+                    <input class="form-check-input" type="checkbox" role="switch" id="wizard-visual-aid" name="has_visual_aid" value="1" {% if visual_aid_checked in [true, '1', 'true', 'on', 'yes'] %}checked{% endif %}>
+                    <label class="form-check-label" for="wizard-visual-aid">Sehhilfe vorhanden</label>
+                </div>
+            </div>
+            <div class="col-12">
+                <label class="form-label">Info</label>
+                <textarea class="form-control" name="info_text" rows="2">{{ values.info_text if values.info_text is defined else '' }}</textarea>
+            </div>
+            <div class="col-12">
+                <label class="form-label">Notizen</label>
+                <textarea class="form-control" name="notes" rows="3">{{ values.notes if values.notes is defined else '' }}</textarea>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center border-top pt-3 mt-4">
+        <button type="button" class="btn btn-outline-secondary" id="wizard-prev" disabled>Zurück</button>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-primary" id="wizard-next">Weiter</button>
+            <button type="submit" class="btn btn-success d-none" id="wizard-submit">Onboarding abschließen</button>
+        </div>
+    </div>
+</form>
+
+<script id="onboarding-inline-error-keys" type="application/json">{{ field_error_keys | tojson }}</script>
+<script id="onboarding-required-labels" type="application/json">{{ required_field_labels | tojson }}</script>
+<script>
+(() => {
+    const form = document.getElementById("onboarding-form");
+    if (!form) {
+        return;
+    }
+
+    const steps = Array.from(form.querySelectorAll(".onboarding-step"));
+    const progressFill = document.getElementById("onboarding-progress-fill");
+    const stepLabel = document.getElementById("onboarding-step-label");
+    const stepName = document.getElementById("onboarding-step-name");
+    const prevBtn = document.getElementById("wizard-prev");
+    const nextBtn = document.getElementById("wizard-next");
+    const submitBtn = document.getElementById("wizard-submit");
+
+    const errorKeys = JSON.parse(document.getElementById("onboarding-inline-error-keys")?.textContent || "[]");
+    const labels = JSON.parse(document.getElementById("onboarding-required-labels")?.textContent || "{}");
+    const citySuggestionsList = document.getElementById("onboarding-city-suggestions");
+    let latestCityNames = [];
+    let cityLookupFailed = false;
+    let cityLookupTimer = null;
+    let cityLookupController = null;
+
+    errorKeys.forEach((key) => {
+        const field = form.querySelector(`[name="${key}"]`);
+        if (!field) {
+            return;
+        }
+        field.classList.add("is-invalid");
+        const existing = field.parentElement?.querySelector(".invalid-feedback");
+        if (existing) {
+            return;
+        }
+        const feedback = document.createElement("div");
+        feedback.className = "invalid-feedback d-block";
+        feedback.textContent = `${labels[key] || key} ist ein Pflichtfeld.`;
+        field.parentElement?.appendChild(feedback);
+    });
+
+    let currentStep = 0;
+
+    function setStep(index) {
+        currentStep = Math.max(0, Math.min(index, steps.length - 1));
+        steps.forEach((step, i) => step.classList.toggle("active", i === currentStep));
+
+        const progressPercent = ((currentStep + 1) / steps.length) * 100;
+        progressFill.style.width = `${progressPercent}%`;
+        stepLabel.textContent = `Schritt ${currentStep + 1} von ${steps.length}`;
+        stepName.textContent = steps[currentStep].dataset.stepName || "";
+
+        prevBtn.disabled = currentStep === 0;
+        const isLast = currentStep === steps.length - 1;
+        nextBtn.classList.toggle("d-none", isLast);
+        submitBtn.classList.toggle("d-none", !isLast);
+    }
+
+    function clearFieldError(field) {
+        field.classList.remove("is-invalid");
+        const feedback = field.parentElement?.querySelector(".invalid-feedback");
+        if (feedback && feedback.textContent?.includes("Pflichtfeld")) {
+            feedback.remove();
+        }
+    }
+
+    function validateCurrentStep() {
+        const current = steps[currentStep];
+        const requiredFields = Array.from(current.querySelectorAll("input, select, textarea"))
+            .filter((field) => field.hasAttribute("required") && field.type !== "hidden");
+
+        let allValid = true;
+        requiredFields.forEach((field) => {
+            const value = (field.value || "").trim();
+            if (value) {
+                clearFieldError(field);
+                return;
+            }
+
+            allValid = false;
+            field.classList.add("is-invalid");
+            const existing = field.parentElement?.querySelector(".invalid-feedback");
+            if (!existing) {
+                const feedback = document.createElement("div");
+                feedback.className = "invalid-feedback d-block";
+                feedback.textContent = "Dieses Feld ist erforderlich.";
+                field.parentElement?.appendChild(feedback);
+            }
+        });
+
+        return allValid;
+    }
+
+    function validateAddressFields() {
+        const birthPlaceField = form.querySelector('input[name="birth_place"]');
+        const postalCodeField = form.querySelector('input[name="postal_code"]');
+        const cityField = form.querySelector('input[name="city"]');
+        const streetField = form.querySelector('input[name="street"]');
+
+        if (!birthPlaceField || !postalCodeField || !cityField || !streetField) {
+            return;
+        }
+
+        const birthPlace = (birthPlaceField.value || "").trim();
+        const postalCode = (postalCodeField.value || "").trim();
+        const city = (cityField.value || "").trim();
+        const street = (streetField.value || "").trim();
+
+        birthPlaceField.setCustomValidity(/^[A-Za-zÄÖÜäöüß\-\s]{2,}$/.test(birthPlace) ? "" : "Bitte einen gültigen Geburtsort eintragen.");
+        postalCodeField.setCustomValidity(/^\d{5}$/.test(postalCode) ? "" : "PLZ muss 5-stellig sein.");
+        if (!/^[A-Za-zÄÖÜäöüß\-\s]{2,}$/.test(city)) {
+            cityField.setCustomValidity("Bitte einen gültigen Ort eintragen.");
+        } else if (!cityLookupFailed && city.length >= 3 && latestCityNames.length > 0 && !latestCityNames.includes(city.toLowerCase())) {
+            cityField.setCustomValidity("Bitte eine vorhandene Stadt in Deutschland wählen.");
+        } else {
+            cityField.setCustomValidity("");
+        }
+        streetField.setCustomValidity(street.length >= 3 ? "" : "Straße muss mindestens 3 Zeichen lang sein.");
+    }
+
+    async function updateCitySuggestions() {
+        const postalCodeField = form.querySelector('input[name="postal_code"]');
+        const cityField = form.querySelector('input[name="city"]');
+        if (!postalCodeField || !cityField || !citySuggestionsList) {
+            return;
+        }
+
+        const postalCode = (postalCodeField.value || "").trim();
+        const cityValue = (cityField.value || "").trim().toLowerCase();
+
+        if (cityValue.length < 3) {
+            citySuggestionsList.innerHTML = "";
+            latestCityNames = [];
+            cityLookupFailed = false;
+            return;
+        }
+
+        if (cityLookupController) {
+            cityLookupController.abort();
+        }
+        cityLookupController = new AbortController();
+
+        const params = new URLSearchParams({
+            city: cityValue,
+            countrycodes: "de",
+            format: "jsonv2",
+            addressdetails: "1",
+            limit: "12",
+        });
+        if (postalCode) {
+            params.set("postalcode", postalCode);
+        }
+
+        let payload = [];
+        try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
+                signal: cityLookupController.signal,
+            });
+            if (!response.ok) {
+                throw new Error("lookup_failed");
+            }
+            payload = await response.json();
+            cityLookupFailed = false;
+        } catch (error) {
+            if (error.name === "AbortError") {
+                return;
+            }
+            cityLookupFailed = true;
+            citySuggestionsList.innerHTML = "";
+            latestCityNames = [];
+            return;
+        }
+
+        const seen = new Set();
+        const candidates = [];
+        payload.forEach((entry) => {
+            const cityName = (
+                entry?.address?.city
+                || entry?.address?.town
+                || entry?.address?.village
+                || entry?.address?.municipality
+                || ""
+            ).trim();
+            if (!cityName) {
+                return;
+            }
+            const key = cityName.toLowerCase();
+            if (seen.has(key)) {
+                return;
+            }
+            seen.add(key);
+            candidates.push({ city: cityName, postalCode: entry?.address?.postcode || "" });
+        });
+
+        latestCityNames = candidates.map((entry) => entry.city.toLowerCase());
+
+        citySuggestionsList.innerHTML = "";
+        candidates.forEach((entry) => {
+            const option = document.createElement("option");
+            option.value = entry.city;
+            option.label = `${entry.city} (${entry.postalCode})`;
+            citySuggestionsList.appendChild(option);
+        });
+    }
+
+    nextBtn.addEventListener("click", () => {
+        validateAddressFields();
+        if (!validateCurrentStep()) {
+            return;
+        }
+        setStep(currentStep + 1);
+    });
+
+    prevBtn.addEventListener("click", () => setStep(currentStep - 1));
+
+    const firstInvalid = form.querySelector(".is-invalid");
+    if (firstInvalid) {
+        const container = firstInvalid.closest(".onboarding-step");
+        const index = container ? steps.indexOf(container) : 0;
+        setStep(Math.max(index, 0));
+    } else {
+        setStep(0);
+    }
+
+    [
+        form.querySelector('input[name="birth_place"]'),
+        form.querySelector('input[name="postal_code"]'),
+        form.querySelector('input[name="city"]'),
+        form.querySelector('input[name="street"]'),
+    ].forEach((field) => {
+        if (!field) {
+            return;
+        }
+        field.addEventListener("input", validateAddressFields);
+        field.addEventListener("blur", validateAddressFields);
+    });
+
+    function scheduleCityLookup() {
+        if (cityLookupTimer) {
+            clearTimeout(cityLookupTimer);
+        }
+        cityLookupTimer = setTimeout(async () => {
+            await updateCitySuggestions();
+            validateAddressFields();
+        }, 250);
+    }
+
+    const postalCodeField = form.querySelector('input[name="postal_code"]');
+    const cityField = form.querySelector('input[name="city"]');
+    if (postalCodeField) {
+        postalCodeField.addEventListener("input", scheduleCityLookup);
+    }
+    if (cityField) {
+        cityField.addEventListener("input", scheduleCityLookup);
+    }
+
+    validateAddressFields();
+    scheduleCityLookup();
+})();
+</script>
+{% endblock %}

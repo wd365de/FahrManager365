@@ -10,6 +10,34 @@
 <body>
 {% if user %}
 {% set current_path = request.url.path %}
+<header class="mobile-topbar d-lg-none">
+    <div class="mobile-topbar-head">
+        <a class="mobile-brand" href="/dashboard">FahrManager 360</a>
+        <a class="btn btn-sm btn-outline-dark" href="/logout">Logout</a>
+    </div>
+    <nav class="mobile-nav-main" aria-label="Mobile Hauptnavigation">
+        <a class="mobile-nav-link mobile-nav-link-main{% if current_path == '/dashboard' %} active{% endif %}" href="/dashboard">Dashboard</a>
+        {% if user.role == "admin" %}
+            <a class="mobile-nav-link mobile-nav-link-main{% if current_path.startswith('/slots') %} active{% endif %}" href="/slots">Planer</a>
+            <a class="mobile-nav-link mobile-nav-link-main{% if current_path.startswith('/exams') %} active{% endif %}" href="/exams/theory">Prüfungen</a>
+            <a class="mobile-nav-link mobile-nav-link-main{% if current_path.startswith('/students') %} active{% endif %}" href="/students">Schüler</a>
+        {% elif user.role == "student" %}
+            <a class="mobile-nav-link mobile-nav-link-main{% if current_path.startswith('/portal') %} active{% endif %}" href="/portal">Portal</a>
+            <a class="mobile-nav-link mobile-nav-link-main{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments">Termine</a>
+        {% endif %}
+        {% if user.role == "admin" %}
+            <a class="mobile-nav-link mobile-nav-link-main{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments">Termine</a>
+        {% endif %}
+    </nav>
+    {% if user.role == "admin" %}
+        <nav class="mobile-nav-links mobile-nav-secondary" aria-label="Mobile Zusatznavigation">
+            <a class="mobile-nav-link{% if current_path.startswith('/exams/organizations') %} active{% endif %}" href="/exams/organizations">Organisationen</a>
+            <a class="mobile-nav-link{% if current_path.startswith('/onboarding') %} active{% endif %}" href="/onboarding">Onboarding</a>
+            <a class="mobile-nav-link{% if current_path.startswith('/teachers') %} active{% endif %}" href="/teachers">Fahrlehrer</a>
+            <a class="mobile-nav-link{% if current_path.startswith('/master-data') %} active{% endif %}" href="/master-data">Stammdaten</a>
+        </nav>
+    {% endif %}
+</header>
 <div class="app-shell">
     <aside class="app-sidebar">
         <div class="app-sidebar-rail">
@@ -34,10 +62,13 @@
                     <a class="sidebar-link{% if current_path == '/dashboard' %} active{% endif %}" href="/dashboard">
                         <span class="sidebar-link-icon">🏠</span>Dashboard
                     </a>
-                    <details class="sidebar-group" {% if current_path.startswith('/students') or current_path.startswith('/teachers') or current_path.startswith('/master-data') %}open{% endif %}>
+                    <details class="sidebar-group" {% if current_path.startswith('/students') or current_path.startswith('/onboarding') or current_path.startswith('/teachers') or current_path.startswith('/master-data') %}open{% endif %}>
                         <summary>Stammdaten</summary>
                         <a class="sidebar-link{% if current_path.startswith('/students') %} active{% endif %}" href="/students">
                             <span class="sidebar-link-icon">👨‍🎓</span>Schüler
+                        </a>
+                        <a class="sidebar-link{% if current_path.startswith('/onboarding') %} active{% endif %}" href="/onboarding">
+                            <span class="sidebar-link-icon">🧭</span>Onboarding
                         </a>
                         <a class="sidebar-link{% if current_path.startswith('/teachers') %} active{% endif %}" href="/teachers">
                             <span class="sidebar-link-icon">👩‍🏫</span>Fahrlehrer
@@ -53,6 +84,18 @@
                         </a>
                         <a class="sidebar-link{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments">
                             <span class="sidebar-link-icon">🗂️</span>Termine
+                        </a>
+                    </details>
+                    <details class="sidebar-group" {% if current_path.startswith('/exams/') %}open{% endif %}>
+                        <summary>Prüfungen</summary>
+                        <a class="sidebar-link{% if current_path.startswith('/exams/theory') %} active{% endif %}" href="/exams/theory">
+                            <span class="sidebar-link-icon">📘</span>Theorieprüfungen
+                        </a>
+                        <a class="sidebar-link{% if current_path.startswith('/exams/practical') %} active{% endif %}" href="/exams/practical">
+                            <span class="sidebar-link-icon">🚗</span>Praxisprüfungen
+                        </a>
+                        <a class="sidebar-link{% if current_path.startswith('/exams/organizations') %} active{% endif %}" href="/exams/organizations">
+                            <span class="sidebar-link-icon">🏢</span>Prüforganisationen
                         </a>
                     </details>
                 {% elif user.role == "teacher" %}
@@ -85,6 +128,20 @@
 {% if user %}
     </main>
 </div>
+<nav class="mobile-bottom-nav d-lg-none{% if user.role == 'admin' %} count-4{% elif user.role == 'student' %} count-3{% else %} count-2{% endif %}" aria-label="Mobile Schnellnavigation">
+    <a class="mobile-bottom-link{% if current_path == '/dashboard' %} active{% endif %}" href="/dashboard"><span class="mobile-bottom-icon">🏠</span><span>Home</span></a>
+    {% if user.role == "admin" %}
+        <a class="mobile-bottom-link{% if current_path.startswith('/slots') %} active{% endif %}" href="/slots"><span class="mobile-bottom-icon">📅</span><span>Plan</span></a>
+        <a class="mobile-bottom-link{% if current_path.startswith('/exams') %} active{% endif %}" href="/exams/theory"><span class="mobile-bottom-icon">🧪</span><span>Prüf.</span></a>
+        <a class="mobile-bottom-link{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments"><span class="mobile-bottom-icon">🗂️</span><span>Termine</span></a>
+    {% elif user.role == "student" %}
+        <a class="mobile-bottom-link{% if current_path.startswith('/portal') %} active{% endif %}" href="/portal"><span class="mobile-bottom-icon">📘</span><span>Portal</span></a>
+        <a class="mobile-bottom-link{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments"><span class="mobile-bottom-icon">🗂️</span><span>Termine</span></a>
+    {% elif user.role == "teacher" %}
+        <a class="mobile-bottom-link{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments"><span class="mobile-bottom-icon">🗂️</span><span>Termine</span></a>
+    {% endif %}
+</nav>
 {% endif %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

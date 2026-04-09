@@ -87,25 +87,32 @@
         </div>
         <div class="col-md-4">
             <label class="form-label">Geburtsort *</label>
-            <input class="form-control" name="birth_place" value="{{ values.birth_place if values.birth_place is defined else ((student.birth_place or '') if student else '') }}" required>
+            <input class="form-control" name="birth_place" pattern="[A-Za-zÄÖÜäöüß\-\s]{2,}" title="Geburtsort muss mindestens 2 Buchstaben enthalten" value="{{ values.birth_place if values.birth_place is defined else ((student.birth_place or '') if student else '') }}" required>
         </div>
         <div class="col-md-4">
             <label class="form-label">Staatsangehörigkeit (Land) *</label>
-            <input class="form-control" name="citizenship_country" value="{{ values.citizenship_country if values.citizenship_country is defined else ((student.citizenship_country or '') if student else '') }}" required>
+            {% set selected_citizenship = values.citizenship_country if values.citizenship_country is defined else ((student.citizenship_country or '') if student else '') %}
+            <select class="form-select" name="citizenship_country" required>
+                <option value="">Bitte wählen</option>
+                {% for country in ['Deutschland', 'Österreich', 'Schweiz', 'Türkei', 'Polen', 'Italien', 'Kroatien', 'Rumänien', 'Ukraine', 'Syrien'] %}
+                    <option value="{{ country }}" {% if selected_citizenship == country %}selected{% endif %}>{{ country }}</option>
+                {% endfor %}
+            </select>
         </div>
 
         <div class="col-12"><h2 class="h6 mb-0 mt-3 student-form-section-title">Adressdaten</h2></div>
         <div class="col-md-4 col-lg-2">
             <label class="form-label">PLZ *</label>
-            <input class="form-control" name="postal_code" value="{{ values.postal_code if values.postal_code is defined else ((student.postal_code or '') if student else '') }}" required>
+            <input class="form-control" name="postal_code" inputmode="numeric" maxlength="5" pattern="\d{5}" title="Bitte 5-stellige PLZ eingeben" value="{{ values.postal_code if values.postal_code is defined else ((student.postal_code or '') if student else '') }}" required>
         </div>
         <div class="col-md-8 col-lg-4">
             <label class="form-label">Ort *</label>
-            <input class="form-control" name="city" value="{{ values.city if values.city is defined else ((student.city or '') if student else '') }}" required>
+            <input class="form-control" name="city" list="city-suggestions" pattern="[A-Za-zÄÖÜäöüß\-\s]{2,}" title="Ort muss mindestens 2 Buchstaben enthalten" value="{{ values.city if values.city is defined else ((student.city or '') if student else '') }}" required>
+            <datalist id="city-suggestions"></datalist>
         </div>
         <div class="col-md-8 col-lg-4">
             <label class="form-label">Straße *</label>
-            <input class="form-control" name="street" value="{{ values.street if values.street is defined else ((student.street or '') if student else '') }}" required>
+            <input class="form-control" name="street" minlength="3" title="Straße muss mindestens 3 Zeichen lang sein" value="{{ values.street if values.street is defined else ((student.street or '') if student else '') }}" required>
         </div>
         <div class="col-md-2">
             <label class="form-label">Nr. *</label>
@@ -116,12 +123,12 @@
             <input class="form-control" name="mobile_phone" value="{{ values.mobile_phone if values.mobile_phone is defined else ((student.mobile_phone or '') if student else '') }}" required>
         </div>
         <div class="col-md-4">
-            <label class="form-label">Telefon privat *</label>
-            <input class="form-control" name="phone_private" value="{{ values.phone_private if values.phone_private is defined else ((student.phone_private or '') if student else '') }}" required>
+            <label class="form-label">Telefon privat</label>
+            <input class="form-control" name="phone_private" value="{{ values.phone_private if values.phone_private is defined else ((student.phone_private or '') if student else '') }}">
         </div>
         <div class="col-md-4">
-            <label class="form-label">Telefon beruflich *</label>
-            <input class="form-control" name="phone_work" value="{{ values.phone_work if values.phone_work is defined else ((student.phone_work or '') if student else '') }}" required>
+            <label class="form-label">Telefon beruflich</label>
+            <input class="form-control" name="phone_work" value="{{ values.phone_work if values.phone_work is defined else ((student.phone_work or '') if student else '') }}">
         </div>
 
         <div class="col-12"><h2 class="h6 mb-0 mt-3 student-form-section-title">Zusatzinfos</h2></div>
@@ -312,4 +319,139 @@
 })();
 </script>
 {% endif %}
+<script>
+(() => {
+    const birthPlaceField = document.querySelector('input[name="birth_place"]');
+    const postalCodeField = document.querySelector('input[name="postal_code"]');
+    const cityField = document.querySelector('input[name="city"]');
+    const streetField = document.querySelector('input[name="street"]');
+    const citySuggestionsList = document.getElementById("city-suggestions");
+    let latestCityNames = [];
+    let cityLookupFailed = false;
+    let cityLookupTimer = null;
+    let cityLookupController = null;
+
+    if (!birthPlaceField || !postalCodeField || !cityField || !streetField || !citySuggestionsList) {
+        return;
+    }
+
+    async function updateCitySuggestions() {
+        const postalCode = (postalCodeField.value || "").trim();
+        const cityValue = (cityField.value || "").trim().toLowerCase();
+
+        if (cityValue.length < 3) {
+            citySuggestionsList.innerHTML = "";
+            latestCityNames = [];
+            cityLookupFailed = false;
+            return;
+        }
+
+        if (cityLookupController) {
+            cityLookupController.abort();
+        }
+        cityLookupController = new AbortController();
+
+        const params = new URLSearchParams({
+            city: cityValue,
+            countrycodes: "de",
+            format: "jsonv2",
+            addressdetails: "1",
+            limit: "12",
+        });
+        if (postalCode) {
+            params.set("postalcode", postalCode);
+        }
+
+        let payload = [];
+        try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
+                signal: cityLookupController.signal,
+            });
+            if (!response.ok) {
+                throw new Error("lookup_failed");
+            }
+            payload = await response.json();
+            cityLookupFailed = false;
+        } catch (error) {
+            if (error.name === "AbortError") {
+                return;
+            }
+            cityLookupFailed = true;
+            citySuggestionsList.innerHTML = "";
+            latestCityNames = [];
+            return;
+        }
+
+        const seen = new Set();
+        const candidates = [];
+        payload.forEach((entry) => {
+            const cityName = (
+                entry?.address?.city
+                || entry?.address?.town
+                || entry?.address?.village
+                || entry?.address?.municipality
+                || ""
+            ).trim();
+            if (!cityName) {
+                return;
+            }
+            const key = cityName.toLowerCase();
+            if (seen.has(key)) {
+                return;
+            }
+            seen.add(key);
+            candidates.push({ city: cityName, postalCode: entry?.address?.postcode || "" });
+        });
+
+        latestCityNames = candidates.map((entry) => entry.city.toLowerCase());
+
+        citySuggestionsList.innerHTML = "";
+        candidates.forEach((entry) => {
+            const option = document.createElement("option");
+            option.value = entry.city;
+            option.label = `${entry.city} (${entry.postalCode})`;
+            citySuggestionsList.appendChild(option);
+        });
+    }
+
+    function validateAddressFields() {
+        const birthPlace = (birthPlaceField.value || "").trim();
+        const postalCode = (postalCodeField.value || "").trim();
+        const city = (cityField.value || "").trim();
+        const street = (streetField.value || "").trim();
+
+        birthPlaceField.setCustomValidity(/^[A-Za-zÄÖÜäöüß\-\s]{2,}$/.test(birthPlace) ? "" : "Bitte einen gültigen Geburtsort eintragen.");
+        postalCodeField.setCustomValidity(/^\d{5}$/.test(postalCode) ? "" : "PLZ muss 5-stellig sein.");
+        if (!/^[A-Za-zÄÖÜäöüß\-\s]{2,}$/.test(city)) {
+            cityField.setCustomValidity("Bitte einen gültigen Ort eintragen.");
+        } else if (!cityLookupFailed && city.length >= 3 && latestCityNames.length > 0 && !latestCityNames.includes(city.toLowerCase())) {
+            cityField.setCustomValidity("Bitte eine vorhandene Stadt in Deutschland wählen.");
+        } else {
+            cityField.setCustomValidity("");
+        }
+        streetField.setCustomValidity(street.length >= 3 ? "" : "Straße muss mindestens 3 Zeichen lang sein.");
+    }
+
+    [birthPlaceField, postalCodeField, cityField, streetField].forEach((field) => {
+        field.addEventListener("input", validateAddressFields);
+        field.addEventListener("blur", validateAddressFields);
+    });
+
+    function scheduleCityLookup() {
+        if (cityLookupTimer) {
+            clearTimeout(cityLookupTimer);
+        }
+        cityLookupTimer = setTimeout(async () => {
+            await updateCitySuggestions();
+            validateAddressFields();
+        }, 250);
+    }
+
+    postalCodeField.addEventListener("input", scheduleCityLookup);
+    cityField.addEventListener("input", scheduleCityLookup);
+
+    validateAddressFields();
+    scheduleCityLookup();
+})();
+</script>
 {% endblock %}

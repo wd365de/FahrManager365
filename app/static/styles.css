@@ -2,6 +2,168 @@ body {
     background-color: #f8f9fa;
 }
 
+.mobile-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 1040;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border-bottom: 1px solid #dbe3ee;
+    padding: 0.6rem 0.75rem;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+}
+
+.mobile-topbar-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.45rem;
+}
+
+.mobile-brand {
+    text-decoration: none;
+    color: #0f172a;
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+.mobile-nav-links {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding: 0.08rem 0 0.16rem;
+}
+
+.mobile-nav-main {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.35rem;
+    margin-bottom: 0.4rem;
+}
+
+.mobile-nav-secondary {
+    margin-top: 0.1rem;
+    padding-top: 0.1rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.mobile-nav-main .mobile-nav-link {
+    text-align: center;
+    padding: 0.42rem 0.5rem;
+    border-radius: 10px;
+}
+
+.mobile-nav-secondary .mobile-nav-link {
+    font-size: 0.74rem;
+    padding: 0.28rem 0.6rem;
+}
+
+.mobile-nav-links::-webkit-scrollbar {
+    height: 0;
+}
+
+.mobile-nav-link {
+    text-decoration: none;
+    white-space: nowrap;
+    border: 1px solid #d4dbe5;
+    border-radius: 999px;
+    padding: 0.34rem 0.74rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #334155;
+    background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+    transition: all 0.18s ease;
+}
+
+.mobile-nav-link:hover {
+    color: #0f172a;
+    border-color: #b8c4d6;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
+}
+
+.mobile-nav-link.active {
+    border-color: #1e40af;
+    color: #ffffff;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    font-weight: 600;
+    box-shadow: 0 6px 14px rgba(37, 99, 235, 0.35);
+}
+
+.mobile-topbar-head .btn {
+    border-radius: 999px;
+    padding: 0.32rem 0.8rem;
+    font-weight: 600;
+    border-color: #c6cfdb;
+    color: #0f172a;
+    background: linear-gradient(180deg, #ffffff 0%, #eef2f7 100%);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+    transition: all 0.18s ease;
+}
+
+.mobile-topbar-head .btn:hover {
+    border-color: #aebbd0;
+    background: linear-gradient(180deg, #ffffff 0%, #e5ebf4 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.14);
+}
+
+.mobile-bottom-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1045;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid #dbe3ee;
+    padding: 0.45rem 0.5rem calc(0.45rem + env(safe-area-inset-bottom));
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.35rem;
+}
+
+.mobile-bottom-nav.count-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mobile-bottom-nav.count-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.mobile-bottom-nav.count-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.mobile-bottom-link {
+    text-decoration: none;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 0.08rem;
+    color: #334155;
+    font-size: 0.74rem;
+    font-weight: 700;
+    border: 1px solid #d4dbe5;
+    border-radius: 9px;
+    background: #ffffff;
+    padding: 0.34rem 0.25rem;
+}
+
+.mobile-bottom-icon {
+    font-size: 0.86rem;
+    line-height: 1;
+}
+
+.mobile-bottom-link.active {
+    color: #1e40af;
+    border-color: #bfdbfe;
+    background: #eff6ff;
+}
+
 .app-shell {
     display: flex;
     min-height: 100vh;
@@ -171,6 +333,10 @@ body {
     gap: 1rem;
 }
 
+.planner-layout-single {
+    grid-template-columns: minmax(0, 1fr);
+}
+
 .planner-calendar .table td {
     min-width: 170px;
     vertical-align: top;
@@ -244,6 +410,32 @@ body {
     padding: 0.9rem;
 }
 
+.slot-detail-overlay-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1060;
+    background: rgba(15, 23, 42, 0.48);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+}
+
+.slot-detail-overlay {
+    width: min(920px, 100%);
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.22);
+}
+
+.slot-detail-overlay-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
 .detail-form-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -281,25 +473,298 @@ body {
     background: #eef2ff;
 }
 
-.card span {
+.mobile-day-card,
+.mobile-teacher-card,
+.mobile-slot-card,
+.mobile-appointment-card,
+.mobile-booking-day {
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    background: #ffffff;
+}
+
+.mobile-day-card,
+.mobile-booking-day {
+    padding: 0.75rem;
+    margin-bottom: 0.7rem;
+}
+
+.mobile-day-card h3,
+.mobile-booking-day h3 {
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+}
+
+.mobile-teacher-card,
+.mobile-appointment-card,
+.mobile-slot-card {
+    padding: 0.6rem;
+    margin-bottom: 0.45rem;
+}
+
+.mobile-teacher-card h4 {
+    font-size: 0.85rem;
+    margin: 0 0 0.4rem;
+}
+
+.mobile-day-card .mobile-teacher-card {
+    background: transparent;
+    border: 0;
+    padding: 0;
+    margin-bottom: 0.6rem;
+}
+
+.mobile-day-card .calendar-slot {
+    border-left-width: 4px;
+    border-radius: 9px;
+    margin-bottom: 0.3rem;
+}
+
+.portal-week-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.portal-week-range {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.mobile-request-form textarea {
+    font-size: 0.85rem;
+}
+
+.dashboard-kpi-value {
     font-size: 1.5rem;
     font-weight: 700;
 }
 
+.exam-student-link {
+    color: #1d4ed8;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.exam-student-link:hover {
+    color: #1e3a8a;
+    text-decoration: underline;
+}
+
+.exam-status-badge {
+    font-size: 0.72rem;
+    font-weight: 600;
+    border-radius: 999px;
+    padding: 0.22rem 0.5rem;
+    letter-spacing: 0.01em;
+    border: 1px solid transparent;
+}
+
+.exam-status-offen {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+    color: #3730a3;
+}
+
+.exam-status-laeuft {
+    background: #ecfeff;
+    border-color: #a5f3fc;
+    color: #155e75;
+}
+
+.exam-status-bestanden {
+    background: #ecfdf3;
+    border-color: #bbf7d0;
+    color: #166534;
+}
+
+.exam-suggestion-badge {
+    font-size: 0.66rem;
+    font-weight: 700;
+    border-radius: 999px;
+    padding: 0.18rem 0.42rem;
+    border: 1px solid #fcd34d;
+    background: #fffbeb;
+    color: #92400e;
+}
+
+.exam-overlay-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1080;
+    background: rgba(15, 23, 42, 0.45);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 1.2rem;
+    overflow-y: auto;
+}
+
+.exam-overlay-card {
+    width: min(680px, 100%);
+    margin-top: 1rem;
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.24);
+}
+
+body.exam-overlay-open {
+    overflow: hidden;
+}
+
 @media (max-width: 991px) {
-    .app-sidebar {
-        width: 210px;
+    .app-shell {
+        min-height: auto;
     }
 
-    .app-sidebar-rail {
-        width: 44px;
+    .app-sidebar {
+        display: none;
     }
 
     .app-content-auth {
         padding: 0.75rem;
+        padding-bottom: 5.2rem;
     }
 
     .planner-layout {
         grid-template-columns: 1fr;
+    }
+
+    .planner-detail-panel {
+        margin-top: 0.25rem;
+    }
+
+    .slot-detail-overlay-backdrop {
+        padding: 0.6rem;
+    }
+
+    .slot-detail-overlay {
+        max-height: calc(100vh - 1.2rem);
+    }
+}
+
+@media (min-width: 992px) {
+    .mobile-topbar {
+        display: none;
+    }
+
+    .mobile-bottom-nav {
+        display: none;
+    }
+}
+
+@media (max-width: 767px) {
+    .app-content-auth {
+        padding: 0.65rem;
+    }
+
+    .portal-week-nav {
+        flex-wrap: wrap;
+    }
+
+    .portal-week-nav .btn {
+        flex: 1 1 calc(50% - 0.25rem);
+    }
+
+    .portal-week-range {
+        width: 100%;
+        text-align: center;
+        order: -1;
+    }
+
+    .detail-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .mobile-topbar-head {
+        margin-bottom: 0.35rem;
+    }
+
+    .mobile-day-card,
+    .mobile-booking-day {
+        border-color: #e2e8f0;
+        border-radius: 9px;
+        padding: 0.62rem;
+        margin-bottom: 0.55rem;
+    }
+
+    .mobile-appointment-card,
+    .mobile-slot-card {
+        border-color: #e2e8f0;
+        border-radius: 9px;
+        padding: 0.5rem;
+        margin-bottom: 0.35rem;
+    }
+
+    .mobile-day-card .mobile-teacher-card {
+        margin-bottom: 0.45rem;
+    }
+
+    .mobile-day-card .calendar-slot {
+        border-top: 1px solid #e2e8f0;
+        border-right: 1px solid #e2e8f0;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 0.32rem 0.44rem;
+    }
+
+    .exam-overlay-backdrop {
+        padding: 0.65rem;
+    }
+
+    .exam-overlay-card {
+        margin-top: 0;
+    }
+}
+
+@media (max-width: 575px) {
+    .mobile-topbar {
+        padding: 0.55rem 0.55rem;
+    }
+
+    .mobile-nav-link {
+        font-size: 0.74rem;
+        padding: 0.24rem 0.5rem;
+    }
+
+    .mobile-bottom-nav {
+        gap: 0.28rem;
+        padding: 0.38rem 0.4rem calc(0.38rem + env(safe-area-inset-bottom));
+    }
+
+    .mobile-bottom-link {
+        font-size: 0.69rem;
+        padding: 0.3rem 0.2rem;
+    }
+
+    .mobile-bottom-icon {
+        font-size: 0.8rem;
+    }
+
+    .mobile-nav-main {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.3rem;
+    }
+
+    .mobile-nav-main .mobile-nav-link {
+        font-size: 0.75rem;
+        padding: 0.38rem 0.44rem;
+    }
+
+    .mobile-nav-secondary .mobile-nav-link {
+        font-size: 0.7rem;
+        padding: 0.24rem 0.5rem;
+    }
+
+    .calendar-slot {
+        padding: 0.32rem 0.45rem;
+    }
+
+    .slot-detail-overlay {
+        padding: 0.75rem;
+    }
+
+    .slot-detail-overlay-header {
+        align-items: flex-start;
+        flex-direction: column;
     }
 }

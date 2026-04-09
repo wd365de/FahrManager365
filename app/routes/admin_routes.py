@@ -1,4 +1,5 @@
 import calendar
+import re
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -9,7 +10,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.auth import hash_password
 from app.database import get_db
-from app.models import Appointment, AvailabilityWindow, Student, Teacher, User
+from app.models import Appointment, AvailabilityWindow, ExamInspector, ExamRegistration, Student, Teacher, User
 from app.readiness import calculate_student_readiness
 from app.planner_settings import (
     get_planner_setting_bool,
@@ -30,6 +31,7 @@ from app.settings import (
     MASTER_DATA_PRICE_LISTS,
     MASTER_DATA_PRODUCT_ASSIGNMENTS,
     MASTER_DATA_PRODUCTS,
+    MASTER_DATA_TRAINING_CATEGORIES,
     MASTER_DATA_VEHICLES,
     PLANNER_SETTING_DEFINITIONS,
     PLANNER_SETTING_SHOW_LOCKED_SLOTS,
@@ -66,6 +68,32 @@ def has_booked_appointments_in_window(db: Session, window: AvailabilityWindow) -
         .first()
         is not None
     )
+
+
+def has_booked_overlap_for_teacher(
+    db: Session,
+    teacher_id: int,
+    start_at: datetime,
+    end_at: datetime,
+    exclude_appointment_id: int | None = None,
+) -> bool:
+    query = db.query(Appointment).filter(
+        Appointment.teacher_id == teacher_id,
+        Appointment.status == "booked",
+        Appointment.start_at < end_at,
+        Appointment.end_at > start_at,
+    )
+    if exclude_appointment_id is not None:
+        query = query.filter(Appointment.id != exclude_appointment_id)
+    return query.first() is not None
+
+
+def normalize_duration_minutes(raw_duration: object, fallback_minutes: int) -> int:
+    try:
+        parsed = int(raw_duration) if raw_duration is not None else int(fallback_minutes)
+    except (TypeError, ValueError):
+        parsed = int(fallback_minutes)
+    return max(1, parsed)
 
 
 def build_slots_redirect_url(
@@ -108,6 +136,97 @@ def parse_product_names(raw_value: str) -> list[str]:
 def parse_form_bool(value: str) -> bool:
     return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
+EXAM_REGISTRATION_STATUSES = {
+    "vorgeschlagen": "Vorgeschlagen",
+    "angemeldet": "Angemeldet",
+    "terminiert": "Terminiert",
+    "bestanden": "Bestanden",
+    "nicht_bestanden": "Nicht bestanden",
+}
+
+SLOTS_FEEDBACK_MESSAGES: dict[str, tuple[str, str]] = {
+    "appointment_created": ("success", "Termin erfolgreich im Planer eingefügt."),
+    "appointment_create_invalid": ("danger", "Termin konnte nicht eingefügt werden. Bitte Angaben prüfen."),
+    "appointment_create_student_mismatch": ("danger", "Der gewählte Fahrschüler passt nicht zum Fahrlehrer des Slots."),
+    "appointment_create_past": ("danger", "Vergangene Slots können nicht gebucht werden."),
+    "appointment_create_overlap": ("danger", "Der Slot ist bereits belegt oder überschneidet sich mit einem Termin."),
+    "appointment_create_duration": ("danger", "Ungültige Slot-Dauer. Bitte Slot prüfen."),
+}
+
+
+def parse_exam_type_tokens(raw_exam_types: str) -> set[str]:
+    return {token.strip().lower() for token in str(raw_exam_types or "").split(",") if token.strip()}
+
+
+def format_exam_type_tokens(exam_type_tokens: set[str]) -> str:
+    if "theory" in exam_type_tokens and "practical" in exam_type_tokens:
+        return "theory,practical"
+    if "theory" in exam_type_tokens:
+        return "theory"
+    return "practical"
+
+
+def get_exam_view_context(db: Session, exam_type: str) -> dict[str, object]:
+    students = db.query(Student).join(User).order_by(User.name.asc()).all()
+    registrations = (
+        db.query(ExamRegistration)
+        .options(joinedload(ExamRegistration.inspector))
+        .filter(ExamRegistration.exam_type == exam_type)
+        .order_by(ExamRegistration.created_at.desc(), ExamRegistration.id.desc())
+        .all()
+    )
+
+    latest_registration_by_student: dict[int, ExamRegistration] = {}
+    for registration in registrations:
+        if registration.student_id not in latest_registration_by_student:
+            latest_registration_by_student[registration.student_id] = registration
+
+    rows = []
+    for student in students:
+        registration = latest_registration_by_student.get(student.id)
+        if exam_type == "theory":
+            status_key = student.theory_status or "offen"
+            is_suggested = status_key != "bestanden"
+        else:
+            status_key = student.practical_status or "offen"
+            is_suggested = (student.theory_status == "bestanden") and status_key != "bestanden"
+        rows.append(
+            {
+                "student_id": student.id,
+                "student_name": student.user.name if student.user else "-",
+                "email": student.user.email if student.user else "-",
+                "training_class": student.training_class or "-",
+                "status": status_key,
+                "exam_organization": student.exam_organization or "-",
+                "exam_location": student.branch_exam_location or "-",
+                "is_suggested": is_suggested,
+                "registration_status": registration.status if registration else "",
+                "registration_status_label": EXAM_REGISTRATION_STATUSES.get(registration.status, registration.status) if registration else "",
+                "registration_planned_date": registration.planned_date if registration else "",
+                "registration_inspector": registration.inspector.name if registration and registration.inspector else "",
+            }
+        )
+
+    inspectors_raw = db.query(ExamInspector).filter(ExamInspector.is_active == True).order_by(ExamInspector.name.asc()).all()
+    inspector_options = []
+    for inspector in inspectors_raw:
+        tokens = parse_exam_type_tokens(inspector.exam_types)
+        if exam_type not in tokens:
+            continue
+        inspector_options.append(
+            {
+                "id": inspector.id,
+                "name": inspector.name,
+                "organization": inspector.organization,
+            }
+        )
+
+    return {
+        "rows": rows,
+        "inspector_options": inspector_options,
+        "registration_status_labels": EXAM_REGISTRATION_STATUSES,
+    }
+
 
 REQUIRED_STUDENT_FIELDS = {
     "salutation": "Anrede",
@@ -122,8 +241,6 @@ REQUIRED_STUDENT_FIELDS = {
     "street": "Straße",
     "house_number": "Nr.",
     "mobile_phone": "Mobil",
-    "phone_private": "Telefon privat",
-    "phone_work": "Telefon beruflich",
     "branch_exam_location": "Filiale Prüfort",
     "exam_organization": "Prüforganisation",
     "training_class": "Klasse",
@@ -133,6 +250,12 @@ REQUIRED_STUDENT_FIELDS = {
     "price_list": "Preisliste",
     "payment_method": "Zahlungsart",
     "cost_bearer": "Kostenträger",
+}
+
+ONBOARDING_REQUIRED_FIELDS = {
+    **REQUIRED_STUDENT_FIELDS,
+    "teacher_id": "Fester Fahrlehrer",
+    "password": "Passwort",
 }
 
 
@@ -148,11 +271,90 @@ def get_missing_student_required_labels(missing_fields: list[str]) -> list[str]:
     return [REQUIRED_STUDENT_FIELDS[key] for key in missing_fields if key in REQUIRED_STUDENT_FIELDS]
 
 
+def get_missing_required_labels(
+    missing_fields: list[str],
+    required_fields: dict[str, str],
+) -> list[str]:
+    return [required_fields[key] for key in missing_fields if key in required_fields]
+
+
+def get_address_validation_errors(form_values: dict[str, str]) -> dict[str, str]:
+    errors: dict[str, str] = {}
+    postal_code = str(form_values.get("postal_code", "")).strip()
+    city = str(form_values.get("city", "")).strip()
+    street = str(form_values.get("street", "")).strip()
+
+    if postal_code and not re.fullmatch(r"\d{5}", postal_code):
+        errors["postal_code"] = "PLZ muss aus genau 5 Ziffern bestehen."
+    if city and not re.fullmatch(r"[A-Za-zÄÖÜäöüß\-\s]{2,}", city):
+        errors["city"] = "Ort darf nur Buchstaben enthalten und muss mindestens 2 Zeichen haben."
+    if street and (len(street) < 3 or not re.search(r"[A-Za-zÄÖÜäöüß]", street)):
+        errors["street"] = "Straße muss mindestens 3 Zeichen lang sein und Buchstaben enthalten."
+
+    return errors
+
+
+def get_onboarding_template_context(db: Session) -> dict[str, object]:
+    teachers = db.query(Teacher).join(User).order_by(User.name.asc()).all()
+    master_data_context = get_master_data_context(db)
+    return {
+        "teachers": teachers,
+        "master_data_options": master_data_context["master_data_options"],
+        "master_data_defaults": master_data_context["master_data_defaults"],
+    }
+
+
 def parse_product_assignments(raw_value: str) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     for product_name in parse_product_names(raw_value):
         rows.append({"product_name": product_name, "assignment": product_name})
     return rows
+
+
+def parse_training_categories(
+    raw_value: str,
+) -> tuple[list[dict[str, int]], list[dict[str, str]]]:
+    valid_rows: list[dict[str, int]] = []
+    invalid_rows: list[dict[str, str]] = []
+    for line_number, line in enumerate(raw_value.splitlines(), start=1):
+        entry = line.strip()
+        if not entry:
+            continue
+        if "|" not in entry:
+            invalid_rows.append(
+                {
+                    "line": str(line_number),
+                    "raw": entry,
+                    "reason": "Trennzeichen '|' fehlt",
+                }
+            )
+            continue
+        category_name, target_value = entry.split("|", 1)
+        category_name = category_name.strip()
+        target_value = target_value.strip()
+
+        if not category_name:
+            invalid_rows.append(
+                {
+                    "line": str(line_number),
+                    "raw": entry,
+                    "reason": "Kategorie-Name fehlt",
+                }
+            )
+            continue
+        if not target_value.isdigit():
+            invalid_rows.append(
+                {
+                    "line": str(line_number),
+                    "raw": entry,
+                    "reason": "Zielwert muss numerisch sein",
+                }
+            )
+            continue
+
+        valid_rows.append({"name": category_name, "target": int(target_value)})
+
+    return valid_rows, invalid_rows
 
 
 PRODUCT_COLOR_OVERRIDES = {
@@ -200,6 +402,7 @@ def get_master_data_context(db: Session) -> dict[str, object]:
     courses_raw = get_planner_setting_value(db, MASTER_DATA_COURSES)
     issue_types_raw = get_planner_setting_value(db, MASTER_DATA_ISSUE_TYPES)
     price_lists_raw = get_planner_setting_value(db, MASTER_DATA_PRICE_LISTS)
+    training_categories_raw = get_planner_setting_value(db, MASTER_DATA_TRAINING_CATEGORIES)
 
     appointment_types = parse_master_data_entries(appointment_types_raw)
     classes = parse_master_data_entries(classes_raw)
@@ -210,6 +413,7 @@ def get_master_data_context(db: Session) -> dict[str, object]:
     courses = parse_master_data_entries(courses_raw)
     issue_types = parse_master_data_entries(issue_types_raw)
     price_lists = parse_master_data_entries(price_lists_raw)
+    training_categories, training_categories_invalid = parse_training_categories(training_categories_raw)
 
     default_appointment_type = get_planner_setting_value(db, MASTER_DATA_DEFAULT_APPOINTMENT_TYPE)
     default_class = get_planner_setting_value(db, MASTER_DATA_DEFAULT_CLASS)
@@ -236,6 +440,10 @@ def get_master_data_context(db: Session) -> dict[str, object]:
             "courses": courses_raw,
             "issue_types": issue_types_raw,
             "price_lists": price_lists_raw,
+            "training_categories": training_categories_raw,
+        },
+        "master_data_validation": {
+            "training_categories_invalid": training_categories_invalid,
         },
         "master_data_options": {
             "appointment_types": appointment_types,
@@ -247,6 +455,7 @@ def get_master_data_context(db: Session) -> dict[str, object]:
             "courses": courses,
             "issue_types": issue_types,
             "price_lists": price_lists,
+            "training_categories": training_categories,
         },
         "master_data_defaults": {
             "appointment_type": default_appointment_type,
@@ -286,6 +495,7 @@ def master_data_update(
     courses: str = Form(""),
     issue_types: str = Form(""),
     price_lists: str = Form(""),
+    training_categories: str = Form(""),
     default_appointment_type: str = Form(""),
     default_class: str = Form(""),
     default_product: str = Form(""),
@@ -307,6 +517,7 @@ def master_data_update(
     set_planner_setting_value(db, MASTER_DATA_COURSES, courses.strip())
     set_planner_setting_value(db, MASTER_DATA_ISSUE_TYPES, issue_types.strip())
     set_planner_setting_value(db, MASTER_DATA_PRICE_LISTS, price_lists.strip())
+    set_planner_setting_value(db, MASTER_DATA_TRAINING_CATEGORIES, training_categories.strip())
     set_planner_setting_value(db, MASTER_DATA_DEFAULT_APPOINTMENT_TYPE, default_appointment_type.strip())
     set_planner_setting_value(db, MASTER_DATA_DEFAULT_CLASS, default_class.strip())
     set_planner_setting_value(db, MASTER_DATA_DEFAULT_PRODUCT, default_product.strip())
@@ -388,6 +599,207 @@ def students_list(request: Request, db: Session = Depends(get_db)):
     )
 
 
+@router.get("/exams/theory")
+def exams_theory(request: Request, db: Session = Depends(get_db)):
+    user, redirect = require_admin(request, db)
+    if redirect:
+        return redirect
+
+    exam_context = get_exam_view_context(db, "theory")
+
+    return templates.TemplateResponse(
+        "exams_page.html",
+        {
+            "request": request,
+            "user": user,
+            "page_title": "Theorieprüfungen",
+            "page_subtitle": "Übersicht des aktuellen Theorie-Prüfungsstatus aller Fahrschüler.",
+            "status_labels": {"offen": "Offen", "bestanden": "Bestanden"},
+            "rows": exam_context["rows"],
+            "inspector_options": exam_context["inspector_options"],
+            "registration_status_labels": exam_context["registration_status_labels"],
+            "exam_type": "theory",
+            "active_exam_nav": "theory",
+        },
+    )
+
+
+@router.get("/exams/practical")
+def exams_practical(request: Request, db: Session = Depends(get_db)):
+    user, redirect = require_admin(request, db)
+    if redirect:
+        return redirect
+
+    exam_context = get_exam_view_context(db, "practical")
+
+    return templates.TemplateResponse(
+        "exams_page.html",
+        {
+            "request": request,
+            "user": user,
+            "page_title": "Praxisprüfungen",
+            "page_subtitle": "Übersicht des aktuellen Praxis-Prüfungsstatus aller Fahrschüler.",
+            "status_labels": {"offen": "Offen", "laeuft": "Läuft", "bestanden": "Bestanden"},
+            "rows": exam_context["rows"],
+            "inspector_options": exam_context["inspector_options"],
+            "registration_status_labels": exam_context["registration_status_labels"],
+            "exam_type": "practical",
+            "active_exam_nav": "practical",
+        },
+    )
+
+
+@router.get("/exams/organizations")
+def exams_organizations(request: Request, db: Session = Depends(get_db)):
+    user, redirect = require_admin(request, db)
+    if redirect:
+        return redirect
+
+    students = db.query(Student).join(User).order_by(User.name.asc()).all()
+    rows = [
+        {
+            "student_id": student.id,
+            "student_name": student.user.name if student.user else "-",
+            "email": student.user.email if student.user else "-",
+            "training_class": student.training_class or "-",
+            "status": student.practical_status or "offen",
+            "exam_organization": student.exam_organization or "-",
+            "exam_location": student.branch_exam_location or "-",
+        }
+        for student in students
+    ]
+
+    organizations_summary: dict[str, int] = {}
+    for row in rows:
+        organization_name = row["exam_organization"]
+        organizations_summary[organization_name] = organizations_summary.get(organization_name, 0) + 1
+
+    organizations = [
+        {"name": name, "students_count": count}
+        for name, count in sorted(organizations_summary.items(), key=lambda item: item[0].lower())
+    ]
+
+    inspectors = db.query(ExamInspector).order_by(ExamInspector.organization.asc(), ExamInspector.name.asc()).all()
+
+    inspector_rows = []
+    for inspector in inspectors:
+        exam_types = parse_exam_type_tokens(inspector.exam_types)
+        labels = []
+        if "theory" in exam_types:
+            labels.append("Theorie")
+        if "practical" in exam_types:
+            labels.append("Praxis")
+        inspector_rows.append(
+            {
+                "name": inspector.name,
+                "organization": inspector.organization,
+                "exam_types_label": ", ".join(labels) if labels else "-",
+                "is_active": inspector.is_active,
+            }
+        )
+
+    return templates.TemplateResponse(
+        "exam_organizations_page.html",
+        {
+            "request": request,
+            "user": user,
+            "rows": rows,
+            "organizations": organizations,
+            "inspectors": inspector_rows,
+            "active_exam_nav": "organizations",
+        },
+    )
+
+
+@router.post("/exams/inspectors/new")
+def exams_inspector_create(
+    request: Request,
+    name: str = Form(""),
+    organization: str = Form(""),
+    exam_type_theory: str = Form("0"),
+    exam_type_practical: str = Form("0"),
+    is_active: str = Form("1"),
+    db: Session = Depends(get_db),
+):
+    _, redirect = require_admin(request, db)
+    if redirect:
+        return redirect
+
+    name_clean = name.strip()
+    organization_clean = organization.strip()
+    if not name_clean or not organization_clean:
+        return RedirectResponse(url="/exams/organizations", status_code=302)
+
+    exam_tokens: set[str] = set()
+    if parse_form_bool(exam_type_theory):
+        exam_tokens.add("theory")
+    if parse_form_bool(exam_type_practical):
+        exam_tokens.add("practical")
+    if not exam_tokens:
+        exam_tokens.add("practical")
+
+    db.add(
+        ExamInspector(
+            name=name_clean,
+            organization=organization_clean,
+            exam_types=format_exam_type_tokens(exam_tokens),
+            is_active=parse_form_bool(is_active),
+        )
+    )
+    db.commit()
+    return RedirectResponse(url="/exams/organizations", status_code=302)
+
+
+@router.post("/exams/register")
+def exams_register_student(
+    request: Request,
+    student_id: int = Form(0),
+    exam_type: str = Form("theory"),
+    organization: str = Form(""),
+    inspector_id: int = Form(0),
+    planned_date: str = Form(""),
+    status: str = Form("angemeldet"),
+    notes: str = Form(""),
+    return_to: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    _, redirect = require_admin(request, db)
+    if redirect:
+        return redirect
+
+    target_exam_type = "theory" if exam_type == "theory" else "practical"
+    redirect_target = return_to.strip() or f"/exams/{target_exam_type}"
+    if not redirect_target.startswith("/exams"):
+        redirect_target = f"/exams/{target_exam_type}"
+
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if not student:
+        return RedirectResponse(url=redirect_target, status_code=302)
+
+    status_key = status if status in EXAM_REGISTRATION_STATUSES else "angemeldet"
+    inspector = None
+    if inspector_id > 0:
+        inspector = db.query(ExamInspector).filter(ExamInspector.id == inspector_id, ExamInspector.is_active == True).first()
+
+    organization_value = organization.strip() or student.exam_organization or "-"
+    registration = ExamRegistration(
+        student_id=student.id,
+        exam_type=target_exam_type,
+        organization=organization_value,
+        inspector_id=inspector.id if inspector else None,
+        planned_date=planned_date.strip() or None,
+        status=status_key,
+        notes=notes.strip() or None,
+    )
+    db.add(registration)
+
+    if organization.strip():
+        student.exam_organization = organization.strip()
+
+    db.commit()
+    return RedirectResponse(url=redirect_target, status_code=302)
+
+
 @router.get("/students/new")
 def students_new_form(request: Request, db: Session = Depends(get_db)):
     user, redirect = require_admin(request, db)
@@ -410,6 +822,228 @@ def students_new_form(request: Request, db: Session = Depends(get_db)):
             "action": "/students/new",
         },
     )
+
+
+@router.get("/onboarding")
+def onboarding_form(request: Request, db: Session = Depends(get_db)):
+    user, redirect = require_admin(request, db)
+    if redirect:
+        return redirect
+
+    context = get_onboarding_template_context(db)
+    return templates.TemplateResponse(
+        "onboarding_wizard.html",
+        {
+            "request": request,
+            "user": user,
+            **context,
+            "form_values": {},
+            "field_error_keys": [],
+            "field_errors": [],
+            "required_field_labels": ONBOARDING_REQUIRED_FIELDS,
+            "selected_teacher_id": context["teachers"][0].id if context["teachers"] else None,
+        },
+    )
+
+
+@router.post("/onboarding")
+def onboarding_create(
+    request: Request,
+    salutation: str = Form(""),
+    first_name: str = Form(""),
+    last_name: str = Form(""),
+    email: str = Form(""),
+    password: str = Form(""),
+    teacher_id: int = Form(0),
+    appointment_type: str = Form(""),
+    training_class: str = Form(""),
+    license_key_number: str = Form(""),
+    issue_type: str = Form(""),
+    enrollment_date: str = Form(""),
+    course_name: str = Form(""),
+    bf17_enabled: str = Form("0"),
+    birth_date: str = Form(""),
+    birth_place: str = Form(""),
+    citizenship_country: str = Form(""),
+    postal_code: str = Form(""),
+    city: str = Form(""),
+    street: str = Form(""),
+    house_number: str = Form(""),
+    mobile_phone: str = Form(""),
+    phone_private: str = Form(""),
+    phone_work: str = Form(""),
+    branch_exam_location: str = Form(""),
+    exam_organization: str = Form(""),
+    has_visual_aid: str = Form("0"),
+    info_text: str = Form(""),
+    product_name: str = Form(""),
+    vehicle_name: str = Form(""),
+    price_list: str = Form(""),
+    payment_method: str = Form(""),
+    cost_bearer: str = Form(""),
+    theory_status: str = Form("offen"),
+    practical_status: str = Form("offen"),
+    notes: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    user, redirect = require_admin(request, db)
+    if redirect:
+        return redirect
+
+    form_values = {
+        "salutation": salutation,
+        "first_name": first_name,
+        "last_name": last_name,
+        "email": email,
+        "teacher_id": str(teacher_id),
+        "appointment_type": appointment_type,
+        "training_class": training_class,
+        "license_key_number": license_key_number,
+        "issue_type": issue_type,
+        "enrollment_date": enrollment_date,
+        "course_name": course_name,
+        "bf17_enabled": bf17_enabled,
+        "birth_date": birth_date,
+        "birth_place": birth_place,
+        "citizenship_country": citizenship_country,
+        "postal_code": postal_code,
+        "city": city,
+        "street": street,
+        "house_number": house_number,
+        "mobile_phone": mobile_phone,
+        "phone_private": phone_private,
+        "phone_work": phone_work,
+        "branch_exam_location": branch_exam_location,
+        "exam_organization": exam_organization,
+        "has_visual_aid": has_visual_aid,
+        "info_text": info_text,
+        "product_name": product_name,
+        "vehicle_name": vehicle_name,
+        "price_list": price_list,
+        "payment_method": payment_method,
+        "cost_bearer": cost_bearer,
+        "theory_status": theory_status,
+        "practical_status": practical_status,
+        "notes": notes,
+    }
+
+    field_error_keys = get_missing_student_required_fields(form_values)
+    if teacher_id <= 0:
+        field_error_keys.append("teacher_id")
+    if not password.strip():
+        field_error_keys.append("password")
+    address_errors = get_address_validation_errors(form_values)
+    for key in address_errors:
+        if key not in field_error_keys:
+            field_error_keys.append(key)
+
+    if field_error_keys:
+        context = get_onboarding_template_context(db)
+        return templates.TemplateResponse(
+            "onboarding_wizard.html",
+            {
+                "request": request,
+                "user": user,
+                **context,
+                "form_values": form_values,
+                "selected_teacher_id": teacher_id if teacher_id > 0 else None,
+                "field_error_keys": field_error_keys,
+                "field_errors": (
+                    get_missing_required_labels(field_error_keys, ONBOARDING_REQUIRED_FIELDS)
+                    + list(address_errors.values())
+                ),
+                "required_field_labels": ONBOARDING_REQUIRED_FIELDS,
+                "error": "Bitte Pflichtfelder ausfüllen.",
+            },
+            status_code=400,
+        )
+
+    selected_teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
+    if not selected_teacher:
+        context = get_onboarding_template_context(db)
+        return templates.TemplateResponse(
+            "onboarding_wizard.html",
+            {
+                "request": request,
+                "user": user,
+                **context,
+                "form_values": form_values,
+                "selected_teacher_id": None,
+                "field_error_keys": ["teacher_id"],
+                "field_errors": [ONBOARDING_REQUIRED_FIELDS["teacher_id"]],
+                "required_field_labels": ONBOARDING_REQUIRED_FIELDS,
+                "error": "Der ausgewählte Fahrlehrer ist nicht gültig.",
+            },
+            status_code=400,
+        )
+
+    if db.query(User).filter(User.email == email).first():
+        context = get_onboarding_template_context(db)
+        return templates.TemplateResponse(
+            "onboarding_wizard.html",
+            {
+                "request": request,
+                "user": user,
+                **context,
+                "form_values": form_values,
+                "selected_teacher_id": teacher_id,
+                "field_error_keys": ["email"],
+                "field_errors": [ONBOARDING_REQUIRED_FIELDS["email"]],
+                "required_field_labels": ONBOARDING_REQUIRED_FIELDS,
+                "error": "E-Mail existiert bereits.",
+            },
+            status_code=400,
+        )
+
+    new_user = User(
+        name=f"{first_name.strip()} {last_name.strip()}".strip(),
+        email=email,
+        password_hash=hash_password(password),
+        role="student",
+    )
+    db.add(new_user)
+    db.flush()
+
+    student = Student(
+        user_id=new_user.id,
+        teacher_id=teacher_id,
+        salutation=salutation.strip() or None,
+        first_name=first_name.strip() or None,
+        last_name=last_name.strip() or None,
+        birth_date=birth_date.strip() or None,
+        birth_place=birth_place.strip() or None,
+        citizenship_country=citizenship_country.strip() or None,
+        postal_code=postal_code.strip() or None,
+        city=city.strip() or None,
+        street=street.strip() or None,
+        house_number=house_number.strip() or None,
+        mobile_phone=mobile_phone.strip() or None,
+        phone_private=phone_private.strip() or None,
+        phone_work=phone_work.strip() or None,
+        appointment_type=appointment_type.strip() or None,
+        training_class=training_class.strip() or None,
+        license_key_number=license_key_number.strip() or None,
+        issue_type=issue_type.strip() or None,
+        enrollment_date=enrollment_date.strip() or None,
+        course_name=course_name.strip() or None,
+        bf17_enabled=parse_form_bool(bf17_enabled),
+        branch_exam_location=branch_exam_location.strip() or None,
+        exam_organization=exam_organization.strip() or None,
+        has_visual_aid=parse_form_bool(has_visual_aid),
+        info_text=info_text.strip() or None,
+        product_name=product_name.strip() or None,
+        vehicle_name=vehicle_name.strip() or None,
+        price_list=price_list.strip() or None,
+        payment_method=payment_method.strip() or None,
+        cost_bearer=cost_bearer.strip() or None,
+        theory_status=theory_status,
+        practical_status=practical_status,
+        notes=notes,
+    )
+    db.add(student)
+    db.commit()
+
+    return RedirectResponse(url="/students", status_code=302)
 
 
 @router.post("/students/new")
@@ -490,7 +1124,12 @@ def students_create(
         "notes": notes,
     }
     field_error_keys = get_missing_student_required_fields(form_values)
+    address_errors = get_address_validation_errors(form_values)
+    for key in address_errors:
+        if key not in field_error_keys:
+            field_error_keys.append(key)
     field_errors = get_missing_student_required_labels(field_error_keys)
+    field_errors.extend(address_errors.values())
     if field_errors:
         teachers = db.query(Teacher).join(User).order_by(User.name.asc()).all()
         master_data_context = get_master_data_context(db)
@@ -707,7 +1346,12 @@ def students_update(
         "notes": notes,
     }
     field_error_keys = get_missing_student_required_fields(form_values)
+    address_errors = get_address_validation_errors(form_values)
+    for key in address_errors:
+        if key not in field_error_keys:
+            field_error_keys.append(key)
     field_errors = get_missing_student_required_labels(field_error_keys)
+    field_errors.extend(address_errors.values())
     if field_errors:
         teachers = db.query(Teacher).join(User).order_by(User.name.asc()).all()
         master_data_context = get_master_data_context(db)
@@ -1026,6 +1670,19 @@ def slots_list(request: Request, db: Session = Depends(get_db)):
     selected_tab = request.query_params.get("tab", "bearbeiten")
     if selected_tab not in {"bearbeiten", "ausbildung", "termine"}:
         selected_tab = "bearbeiten"
+    feedback_code = request.query_params.get("feedback", "").strip()
+    feedback_level, feedback_message = SLOTS_FEEDBACK_MESSAGES.get(feedback_code, ("", ""))
+
+    selected_window_students: list[Student] = []
+    if selected_window and not selected_booking:
+        selected_window_students = (
+            db.query(Student)
+            .options(joinedload(Student.user))
+            .join(User)
+            .filter(Student.teacher_id == selected_window.teacher_id)
+            .order_by(User.name.asc())
+            .all()
+        )
 
     student_stats = {
         "appointments_total": 0,
@@ -1058,9 +1715,56 @@ def slots_list(request: Request, db: Session = Depends(get_db)):
         student_past_appointments = [appt for appt in student_all_appointments if appt.start_at < now_dt][:10]
 
     master_data_context = get_master_data_context(db)
+    master_data_options = master_data_context["master_data_options"]
     product_options = master_data_context["master_data_options"]["products"]
     product_colors = get_product_color_map(product_options)
     show_locked_slots = get_planner_setting_bool(db, PLANNER_SETTING_SHOW_LOCKED_SLOTS)
+    alternative_windows: list[dict[str, object]] = []
+    if selected_booking and selected_window:
+        candidate_windows = (
+            db.query(AvailabilityWindow)
+            .options(joinedload(AvailabilityWindow.teacher).joinedload(Teacher.user))
+            .filter(
+                AvailabilityWindow.start_at >= datetime.now(),
+                AvailabilityWindow.id != selected_window.id,
+            )
+            .order_by(AvailabilityWindow.start_at.asc())
+            .limit(150)
+            .all()
+        )
+        appointment_duration = normalize_duration_minutes(
+            selected_booking.duration_min,
+            WEEK_SLOT_DURATION_MINUTES,
+        )
+        for candidate_window in candidate_windows:
+            if not candidate_window.start_at or not candidate_window.end_at:
+                continue
+            if not candidate_window.teacher_id:
+                continue
+            candidate_end = candidate_window.start_at + timedelta(minutes=appointment_duration)
+            if candidate_end > candidate_window.end_at:
+                continue
+            if has_booked_overlap_for_teacher(
+                db,
+                teacher_id=candidate_window.teacher_id,
+                start_at=candidate_window.start_at,
+                end_at=candidate_end,
+                exclude_appointment_id=selected_booking.id,
+            ):
+                continue
+            teacher_name = "Unbekannt"
+            if candidate_window.teacher and candidate_window.teacher.user:
+                teacher_name = candidate_window.teacher.user.name
+            alternative_windows.append(
+                {
+                    "window_id": candidate_window.id,
+                    "teacher_name": teacher_name,
+                    "start_at": candidate_window.start_at,
+                    "end_at": candidate_end,
+                }
+            )
+            if len(alternative_windows) >= 30:
+                break
 
     return templates.TemplateResponse(
         "slots_list.html",
@@ -1088,12 +1792,17 @@ def slots_list(request: Request, db: Session = Depends(get_db)):
             "selected_window": selected_window,
             "selected_booking": selected_booking,
             "selected_student": selected_student,
+            "selected_window_students": selected_window_students,
             "selected_tab": selected_tab,
+            "planner_feedback_level": feedback_level,
+            "planner_feedback_message": feedback_message,
             "student_stats": student_stats,
             "student_future_appointments": student_future_appointments,
             "student_past_appointments": student_past_appointments,
+            "master_data_options": master_data_options,
             "product_options": product_options,
             "product_colors": product_colors,
+            "alternative_windows": alternative_windows,
             "master_data_defaults": {
                 "appointment_type": selected_student.appointment_type if selected_student and selected_student.appointment_type else master_data_context["master_data_defaults"]["appointment_type"],
                 "class": selected_student.training_class if selected_student and selected_student.training_class else master_data_context["master_data_defaults"]["class"],
@@ -1105,6 +1814,78 @@ def slots_list(request: Request, db: Session = Depends(get_db)):
             "show_locked_slots": show_locked_slots,
         },
     )
+
+
+@router.post("/slots/{slot_id}/appointments/create")
+def slots_create_appointment(
+    slot_id: int,
+    request: Request,
+    student_id: int = Form(...),
+    week_start: str = Form(""),
+    view: str = Form(""),
+    day: str = Form(""),
+    selected_window_id: str = Form(""),
+    request_message: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    _, redirect = require_admin(request, db)
+    if redirect:
+        return redirect
+
+    redirect_url = build_slots_redirect_url(
+        week_start=week_start,
+        view=view,
+        day=day,
+        selected_window_id=selected_window_id or str(slot_id),
+        tab="bearbeiten",
+    )
+
+    def redirect_with_feedback(feedback_code: str) -> RedirectResponse:
+        separator = "&" if "?" in redirect_url else "?"
+        return RedirectResponse(url=f"{redirect_url}{separator}feedback={feedback_code}", status_code=302)
+
+    window = db.query(AvailabilityWindow).filter(AvailabilityWindow.id == slot_id).first()
+    student = (
+        db.query(Student)
+        .options(joinedload(Student.user))
+        .filter(Student.id == student_id)
+        .first()
+    )
+    if not window or not student:
+        return redirect_with_feedback("appointment_create_invalid")
+
+    if not student.teacher_id or student.teacher_id != window.teacher_id:
+        return redirect_with_feedback("appointment_create_student_mismatch")
+
+    if window.start_at < datetime.now():
+        return redirect_with_feedback("appointment_create_past")
+
+    if has_booked_overlap_for_teacher(
+        db,
+        teacher_id=window.teacher_id,
+        start_at=window.start_at,
+        end_at=window.end_at,
+    ):
+        return redirect_with_feedback("appointment_create_overlap")
+
+    duration_min = int((window.end_at - window.start_at).total_seconds() // 60)
+    if duration_min <= 0:
+        return redirect_with_feedback("appointment_create_duration")
+
+    appointment = Appointment(
+        student_id=student.id,
+        teacher_id=window.teacher_id,
+        start_at=window.start_at,
+        end_at=window.end_at,
+        duration_min=duration_min,
+        status="booked",
+        requires_teacher_confirmation=False,
+        request_message=request_message.strip() or None,
+        is_request_seen_by_admin=True,
+    )
+    db.add(appointment)
+    db.commit()
+    return redirect_with_feedback("appointment_created")
 
 
 @router.post("/slots/appointments/{appointment_id}/cancel")
@@ -1136,6 +1917,108 @@ def slots_cancel_appointment(
     if selected_window_id:
         redirect_url += f"&selected_window_id={selected_window_id}"
     redirect_url += "&tab=bearbeiten"
+    return RedirectResponse(url=redirect_url, status_code=302)
+
+
+@router.post("/slots/appointments/{appointment_id}/details")
+def slots_update_appointment_details(
+    appointment_id: int,
+    request: Request,
+    week_start: str = Form(""),
+    view: str = Form(""),
+    day: str = Form(""),
+    selected_window_id: str = Form(""),
+    appointment_type: str = Form(""),
+    training_class: str = Form(""),
+    product_name: str = Form(""),
+    vehicle_name: str = Form(""),
+    notes: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    _, redirect = require_admin(request, db)
+    if redirect:
+        return redirect
+
+    appointment = (
+        db.query(Appointment)
+        .options(joinedload(Appointment.student))
+        .filter(Appointment.id == appointment_id)
+        .first()
+    )
+    redirect_url = build_slots_redirect_url(
+        week_start=week_start,
+        view=view,
+        day=day,
+        selected_window_id=selected_window_id,
+        tab="bearbeiten",
+    )
+    if not appointment or appointment.status != "booked" or not appointment.student:
+        return RedirectResponse(url=redirect_url, status_code=302)
+
+    appointment.student.appointment_type = appointment_type.strip() or None
+    appointment.student.training_class = training_class.strip() or None
+    appointment.student.product_name = product_name.strip() or None
+    appointment.student.vehicle_name = vehicle_name.strip() or None
+    appointment.student.notes = notes.strip() or None
+    db.commit()
+    return RedirectResponse(url=redirect_url, status_code=302)
+
+
+@router.post("/slots/appointments/{appointment_id}/reschedule")
+def slots_reschedule_appointment(
+    appointment_id: int,
+    request: Request,
+    target_window_id: int = Form(...),
+    week_start: str = Form(""),
+    view: str = Form(""),
+    day: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    _, redirect = require_admin(request, db)
+    if redirect:
+        return redirect
+
+    appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
+    if not appointment or appointment.status != "booked":
+        return RedirectResponse(url="/slots", status_code=302)
+
+    target_window = db.query(AvailabilityWindow).filter(AvailabilityWindow.id == target_window_id).first()
+    if not target_window:
+        return RedirectResponse(url="/slots", status_code=302)
+
+    appointment_duration = normalize_duration_minutes(
+        appointment.duration_min,
+        WEEK_SLOT_DURATION_MINUTES,
+    )
+    new_start = target_window.start_at
+    new_end = target_window.start_at + timedelta(minutes=appointment_duration)
+
+    redirect_url = build_slots_redirect_url(
+        week_start=week_start,
+        view=view,
+        day=day,
+        selected_window_id=str(target_window_id),
+        tab="bearbeiten",
+    )
+
+    if new_start < datetime.now() or new_end > target_window.end_at:
+        return RedirectResponse(url=redirect_url, status_code=302)
+
+    if has_booked_overlap_for_teacher(
+        db,
+        teacher_id=target_window.teacher_id,
+        start_at=new_start,
+        end_at=new_end,
+        exclude_appointment_id=appointment.id,
+    ):
+        return RedirectResponse(url=redirect_url, status_code=302)
+
+    appointment.teacher_id = target_window.teacher_id
+    appointment.start_at = new_start
+    appointment.end_at = new_end
+    appointment.duration_min = appointment_duration
+    appointment.requires_teacher_confirmation = False
+    db.commit()
     return RedirectResponse(url=redirect_url, status_code=302)
 
 

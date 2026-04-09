@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+    <div>
+        <h1 class="h4 mb-1">{{ page_title }}</h1>
+        <p class="text-muted small mb-0">{{ page_subtitle }}</p>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-2">
+        <a class="btn btn-primary btn-sm" href="/students/new">+ Fahrschüler hinzufügen</a>
+        <button type="button" class="btn btn-success btn-sm" id="exam-register-open">Prüfung hinzufügen</button>
+        <div class="btn-group" role="group" aria-label="Prüfungsnavigation">
+            <a class="btn btn-outline-primary btn-sm{% if active_exam_nav == 'theory' %} active{% endif %}" href="/exams/theory">Theorie</a>
+            <a class="btn btn-outline-primary btn-sm{% if active_exam_nav == 'practical' %} active{% endif %}" href="/exams/practical">Praxis</a>
+            <a class="btn btn-outline-primary btn-sm{% if active_exam_nav == 'organizations' %} active{% endif %}" href="/exams/organizations">Organisationen</a>
+        </div>
+    </div>
+</div>
+
+<div class="card card-body mb-3">
+    <div class="row g-2 align-items-end" id="exam-filter-form">
+        <div class="col-12 col-md-5">
+            <label class="form-label small mb-1" for="exam-filter-name">Fahrschüler</label>
+            <input class="form-control form-control-sm" id="exam-filter-name" type="text" placeholder="Name suchen ...">
+        </div>
+        <div class="col-6 col-md-3">
+            <label class="form-label small mb-1" for="exam-filter-status">Status</label>
+            <select class="form-select form-select-sm" id="exam-filter-status">
+                <option value="">Alle</option>
+                {% for status_key, status_label in status_labels.items() %}
+                    <option value="{{ status_key }}">{{ status_label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-6 col-md-4">
+            <label class="form-label small mb-1" for="exam-filter-organization">Prüforganisation</label>
+            <input class="form-control form-control-sm" id="exam-filter-organization" type="text" placeholder="z. B. TÜV, DEKRA ...">
+        </div>
+        <div class="col-12 col-md-auto">
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="exam-filter-reset">Filter zurücksetzen</button>
+        </div>
+    </div>
+</div>
+
+<div class="card card-body">
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Fahrschüler</th>
+                    <th>E-Mail</th>
+                    <th>Klasse</th>
+                    <th>Status</th>
+                    <th>Anmeldung</th>
+                    <th>Prüforganisation</th>
+                    <th>Prüfort</th>
+                    <th class="text-end">Aktion</th>
+                </tr>
+            </thead>
+            <tbody id="exam-table-body">
+                {% for row in rows %}
+                    <tr
+                        data-student-name="{{ row.student_name|lower }}"
+                        data-status="{{ row.status|lower }}"
+                        data-organization="{{ row.exam_organization|lower }}"
+                    >
+                        <td>
+                            {% if row.student_id %}
+                                <a href="/students/{{ row.student_id }}/edit" class="exam-student-link">{{ row.student_name }}</a>
+                                {% if row.is_suggested %}
+                                    <span class="badge exam-suggestion-badge ms-1">Vorschlag</span>
+                                {% endif %}
+                            {% else %}
+                                {{ row.student_name }}
+                            {% endif %}
+                        </td>
+                        <td>{{ row.email }}</td>
+                        <td>{{ row.training_class }}</td>
+                        <td>
+                            <span class="badge exam-status-badge exam-status-{{ row.status }}">{{ status_labels[row.status] if row.status in status_labels else row.status }}</span>
+                        </td>
+                        <td>
+                            {% if row.registration_status %}
+                                <div class="small fw-semibold">{{ row.registration_status_label }}</div>
+                                <div class="small text-muted">{{ row.registration_planned_date or 'ohne Datum' }}{% if row.registration_inspector %} · {{ row.registration_inspector }}{% endif %}</div>
+                            {% else %}
+                                <span class="text-muted small">Keine Anmeldung</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ row.exam_organization }}</td>
+                        <td>{{ row.exam_location }}</td>
+                        <td class="text-end">
+                            <button
+                                type="button"
+                                class="btn btn-outline-primary btn-sm exam-register-btn"
+                                data-student-id="{{ row.student_id }}"
+                                data-student-name="{{ row.student_name }}"
+                                data-organization="{{ row.exam_organization if row.exam_organization != '-' else '' }}"
+                            >
+                                Zur Prüfung anmelden
+                            </button>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="8" class="text-muted text-center py-3">Keine Fahrschüler vorhanden.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="exam-overlay-backdrop d-none" id="exam-register-overlay" role="dialog" aria-modal="true" aria-labelledby="exam-register-title">
+    <div class="card card-body exam-overlay-card">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+            <h2 class="h6 mb-0" id="exam-register-title">Fahrschüler zur Prüfung anmelden</h2>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="exam-register-close">Schließen</button>
+        </div>
+        <form method="post" action="/exams/register" class="row g-2">
+            <input type="hidden" name="exam_type" value="{{ exam_type }}">
+            <input type="hidden" name="return_to" value="{{ request.url.path }}{% if request.url.query %}?{{ request.url.query }}{% endif %}">
+
+            <div class="col-12">
+                <label class="form-label small mb-1">Fahrschüler</label>
+                <select class="form-select form-select-sm" name="student_id" id="exam-register-student" required>
+                    <option value="">Bitte wählen</option>
+                    {% for row in rows %}
+                        <option value="{{ row.student_id }}" data-organization="{{ row.exam_organization if row.exam_organization != '-' else '' }}">{{ row.student_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label small mb-1">Prüforganisation</label>
+                <input class="form-control form-control-sm" name="organization" id="exam-register-organization" placeholder="z. B. TÜV" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small mb-1">Fahrprüfer</label>
+                <select class="form-select form-select-sm" name="inspector_id" id="exam-register-inspector">
+                    <option value="0">Kein Fahrprüfer</option>
+                    {% for inspector in inspector_options %}
+                        <option value="{{ inspector.id }}" data-organization="{{ inspector.organization|lower }}">{{ inspector.name }} ({{ inspector.organization }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label small mb-1">Geplanter Termin</label>
+                <input class="form-control form-control-sm" type="date" name="planned_date">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small mb-1">Status</label>
+                <select class="form-select form-select-sm" name="status">
+                    {% for status_key, status_label in registration_status_labels.items() %}
+                        <option value="{{ status_key }}" {% if status_key == 'angemeldet' %}selected{% endif %}>{{ status_label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-12">
+                <label class="form-label small mb-1">Notiz</label>
+                <textarea class="form-control form-control-sm" name="notes" rows="2" placeholder="Optional"></textarea>
+            </div>
+
+            <div class="col-12 d-flex justify-content-end gap-2 mt-1">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="exam-register-cancel">Abbrechen</button>
+                <button type="submit" class="btn btn-primary btn-sm">Anmeldung speichern</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+(() => {
+    const tableBody = document.getElementById("exam-table-body");
+    const nameFilter = document.getElementById("exam-filter-name");
+    const statusFilter = document.getElementById("exam-filter-status");
+    const organizationFilter = document.getElementById("exam-filter-organization");
+    const resetButton = document.getElementById("exam-filter-reset");
+    const registerOpenButton = document.getElementById("exam-register-open");
+    const registerButtons = Array.from(document.querySelectorAll(".exam-register-btn"));
+    const registerOverlay = document.getElementById("exam-register-overlay");
+    const registerClose = document.getElementById("exam-register-close");
+    const registerCancel = document.getElementById("exam-register-cancel");
+    const registerStudent = document.getElementById("exam-register-student");
+    const registerOrganization = document.getElementById("exam-register-organization");
+    const registerInspector = document.getElementById("exam-register-inspector");
+
+    if (
+        !tableBody || !nameFilter || !statusFilter || !organizationFilter || !resetButton
+        || !registerOpenButton || !registerOverlay || !registerClose || !registerCancel
+        || !registerStudent || !registerOrganization || !registerInspector
+    ) {
+        return;
+    }
+
+    const rows = Array.from(tableBody.querySelectorAll("tr[data-student-name]"));
+    const query = new URLSearchParams(window.location.search);
+
+    function updateUrlQuery() {
+        const nextQuery = new URLSearchParams(window.location.search);
+        const nameValue = nameFilter.value.trim();
+        const statusValue = statusFilter.value.trim();
+        const organizationValue = organizationFilter.value.trim();
+
+        if (nameValue) {
+            nextQuery.set("student", nameValue);
+        } else {
+            nextQuery.delete("student");
+        }
+
+        if (statusValue) {
+            nextQuery.set("status", statusValue);
+        } else {
+            nextQuery.delete("status");
+        }
+
+        if (organizationValue) {
+            nextQuery.set("org", organizationValue);
+        } else {
+            nextQuery.delete("org");
+        }
+
+        const queryString = nextQuery.toString();
+        const targetUrl = queryString ? `${window.location.pathname}?${queryString}` : window.location.pathname;
+        window.history.replaceState({}, "", targetUrl);
+    }
+
+    function applyFilters() {
+        const nameValue = nameFilter.value.trim().toLowerCase();
+        const statusValue = statusFilter.value.trim().toLowerCase();
+        const organizationValue = organizationFilter.value.trim().toLowerCase();
+
+        rows.forEach((row) => {
+            const studentName = row.dataset.studentName || "";
+            const status = row.dataset.status || "";
+            const organization = row.dataset.organization || "";
+
+            const matchesName = !nameValue || studentName.includes(nameValue);
+            const matchesStatus = !statusValue || status === statusValue;
+            const matchesOrganization = !organizationValue || organization.includes(organizationValue);
+
+            row.classList.toggle("d-none", !(matchesName && matchesStatus && matchesOrganization));
+        });
+
+        updateUrlQuery();
+    }
+
+    [nameFilter, statusFilter, organizationFilter].forEach((field) => {
+        field.addEventListener("input", applyFilters);
+        field.addEventListener("change", applyFilters);
+    });
+
+    resetButton.addEventListener("click", () => {
+        nameFilter.value = "";
+        statusFilter.value = "";
+        organizationFilter.value = "";
+        applyFilters();
+    });
+
+    function filterInspectorOptions() {
+        const selectedOrganization = registerOrganization.value.trim().toLowerCase();
+        Array.from(registerInspector.options).forEach((option, index) => {
+            if (index === 0) {
+                option.hidden = false;
+                return;
+            }
+            const optionOrganization = (option.dataset.organization || "").toLowerCase();
+            option.hidden = !!selectedOrganization && optionOrganization !== selectedOrganization;
+        });
+        if (registerInspector.selectedOptions[0]?.hidden) {
+            registerInspector.value = "0";
+        }
+    }
+
+    function openRegisterOverlay(studentId = "", organization = "") {
+        registerOverlay.classList.remove("d-none");
+        document.body.classList.add("exam-overlay-open");
+        registerStudent.value = studentId || "";
+        registerOrganization.value = organization || "";
+        registerInspector.value = "0";
+        filterInspectorOptions();
+    }
+
+    function closeRegisterOverlay() {
+        registerOverlay.classList.add("d-none");
+        document.body.classList.remove("exam-overlay-open");
+    }
+
+    registerOpenButton.addEventListener("click", () => openRegisterOverlay());
+    registerButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            openRegisterOverlay(button.dataset.studentId || "", button.dataset.organization || "");
+        });
+    });
+
+    registerClose.addEventListener("click", closeRegisterOverlay);
+    registerCancel.addEventListener("click", closeRegisterOverlay);
+    registerOverlay.addEventListener("click", (event) => {
+        if (event.target === registerOverlay) {
+            closeRegisterOverlay();
+        }
+    });
+
+    registerOrganization.addEventListener("input", filterInspectorOptions);
+
+    registerStudent.addEventListener("change", () => {
+        const selected = registerStudent.selectedOptions[0];
+        if (!selected) {
+            return;
+        }
+        if (!registerOrganization.value.trim() && selected.dataset.organization) {
+            registerOrganization.value = selected.dataset.organization;
+            filterInspectorOptions();
+        }
+    });
+
+    nameFilter.value = query.get("student") || "";
+    statusFilter.value = query.get("status") || "";
+    organizationFilter.value = query.get("org") || "";
+    applyFilters();
+})();
+</script>
+{% endblock %}
