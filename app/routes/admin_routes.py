@@ -716,9 +716,6 @@ def exams_inspector_create(
     request: Request,
     name: str = Form(""),
     organization: str = Form(""),
-    exam_type_theory: str = Form("0"),
-    exam_type_practical: str = Form("0"),
-    is_active: str = Form("1"),
     db: Session = Depends(get_db),
 ):
     _, redirect = require_admin(request, db)
@@ -730,20 +727,12 @@ def exams_inspector_create(
     if not name_clean or not organization_clean:
         return RedirectResponse(url="/exams/organizations", status_code=302)
 
-    exam_tokens: set[str] = set()
-    if parse_form_bool(exam_type_theory):
-        exam_tokens.add("theory")
-    if parse_form_bool(exam_type_practical):
-        exam_tokens.add("practical")
-    if not exam_tokens:
-        exam_tokens.add("practical")
-
     db.add(
         ExamInspector(
             name=name_clean,
             organization=organization_clean,
-            exam_types=format_exam_type_tokens(exam_tokens),
-            is_active=parse_form_bool(is_active),
+            exam_types="practical",
+            is_active=True,
         )
     )
     db.commit()

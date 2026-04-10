@@ -21,10 +21,20 @@ body {
 }
 
 .mobile-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
     text-decoration: none;
     color: #0f172a;
     font-weight: 700;
     font-size: 0.95rem;
+}
+
+.brand-logo-mobile {
+    width: 200px;
+    max-width: 55vw;
+    height: auto;
+    object-fit: contain;
 }
 
 .mobile-nav-links {
@@ -240,7 +250,9 @@ body {
 }
 
 .app-brand {
-    display: block;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
     color: #0f172a;
     text-decoration: none;
     font-weight: 700;
@@ -248,18 +260,37 @@ body {
     font-size: 0.95rem;
 }
 
+.brand-logo-sidebar {
+    width: 200px;
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
+.login-brand-wrap {
+    margin-top: 0.75rem;
+}
+
+.login-logo {
+    width: 440px;
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
 .sidebar-section-title {
     font-size: 0.72rem;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: #6b7280;
-    margin: 0.25rem 0 0.6rem;
+    color: #64748b;
+    margin: 0.3rem 0 0.65rem;
+    font-weight: 700;
 }
 
 .sidebar-nav {
     display: flex;
     flex-direction: column;
-    gap: 0.3rem;
+    gap: 0.45rem;
 }
 
 .sidebar-link {
@@ -269,16 +300,19 @@ body {
     font-size: 0.9rem;
     padding: 0.42rem 0.5rem;
     border-radius: 8px;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
 }
 
 .sidebar-link:hover {
-    background: #e5e7eb;
+    background: #eef2f7;
+    box-shadow: none;
 }
 
 .sidebar-link.active {
-    background: #dbeafe;
-    color: #1e3a8a;
+    background: #e9f0fb;
+    color: #27406f;
     font-weight: 600;
+    box-shadow: inset 0 0 0 1px #d8e5f7;
 }
 
 .sidebar-link-icon {
@@ -289,8 +323,11 @@ body {
 }
 
 .sidebar-group {
-    border-radius: 8px;
-    padding: 0.1rem 0.2rem;
+    border-radius: 10px;
+    padding: 0.35rem;
+    border: 1px solid #e3e8ef;
+    background: #f9fbfd;
+    box-shadow: 4px 4px 8px rgba(148, 163, 184, 0.19), -4px -4px 8px rgba(255, 255, 255, 0.92);
 }
 
 .sidebar-group summary {
@@ -298,8 +335,11 @@ body {
     list-style: none;
     font-size: 0.86rem;
     font-weight: 600;
-    color: #374151;
-    padding: 0.35rem 0.3rem;
+    color: #334155;
+    padding: 0.4rem 0.45rem;
+    border-radius: 8px;
+    background: #f2f5f9;
+    box-shadow: inset 1px 1px 3px rgba(255, 255, 255, 0.9), inset -1px -1px 3px rgba(148, 163, 184, 0.22);
 }
 
 .sidebar-group summary::-webkit-details-marker {
@@ -307,11 +347,17 @@ body {
 }
 
 .sidebar-group[open] {
-    background: #f1f5f9;
+    background: #f5f8fc;
+    border-color: #dce4ee;
+    box-shadow: 3px 3px 7px rgba(148, 163, 184, 0.17), -3px -3px 7px rgba(255, 255, 255, 0.92);
 }
 
 .sidebar-group .sidebar-link {
-    margin-left: 0.2rem;
+    margin: 0.25rem 0.15rem 0;
+}
+
+.sidebar-group .sidebar-link.active {
+    box-shadow: inset 1px 1px 3px rgba(255, 255, 255, 0.78), inset -1px -1px 3px rgba(148, 163, 184, 0.19);
 }
 
 .sidebar-footer {
@@ -325,6 +371,71 @@ body {
 
 .app-content-auth {
     padding: 1rem 1.25rem;
+    background: #f3f6fb;
+}
+
+.app-content-auth .card {
+    border: 1px solid #dbe3ee;
+    background: #f8fbff;
+    border-radius: 12px;
+    box-shadow: 4px 4px 10px rgba(148, 163, 184, 0.14), -4px -4px 10px rgba(255, 255, 255, 0.92);
+}
+
+.app-content-auth .table-responsive {
+    border: 1px solid #dbe3ee;
+    border-radius: 12px;
+    background: #f9fbfd;
+    box-shadow: inset 1px 1px 2px rgba(255, 255, 255, 0.75), inset -1px -1px 2px rgba(148, 163, 184, 0.12);
+}
+
+.app-content-auth .table {
+    margin-bottom: 0;
+    --bs-table-bg: transparent;
+}
+
+.app-content-auth .table thead th {
+    color: #334155;
+    font-weight: 700;
+    background: #eef3f9;
+    border-bottom-color: #d6dfeb;
+}
+
+.app-content-auth .table tbody td,
+.app-content-auth .table tbody th {
+    border-color: #e0e7f1;
+}
+
+.app-content-auth .table tbody tr:hover {
+    background: #f3f7fc;
+}
+
+.app-content-auth .form-label {
+    color: #334155;
+    font-weight: 600;
+}
+
+.app-content-auth .form-control,
+.app-content-auth .form-select,
+.app-content-auth .form-control-sm,
+.app-content-auth .form-select-sm,
+.app-content-auth textarea {
+    border: 1px solid #d5deea;
+    background: #f6f9fd;
+    box-shadow: inset 1px 1px 2px rgba(255, 255, 255, 0.72), inset -1px -1px 2px rgba(148, 163, 184, 0.14);
+}
+
+.app-content-auth .form-control:focus,
+.app-content-auth .form-select:focus,
+.app-content-auth textarea:focus {
+    border-color: #a9bfdc;
+    background: #fbfdff;
+    box-shadow: 0 0 0 0.14rem rgba(106, 141, 187, 0.18), inset 1px 1px 2px rgba(255, 255, 255, 0.82);
+}
+
+.app-content-auth .input-group-text {
+    border-color: #d5deea;
+    background: #eef3f9;
+    color: #475569;
 }
 
 .planner-layout {

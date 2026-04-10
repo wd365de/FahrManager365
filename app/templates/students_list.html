@@ -1,18 +1,230 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+    .students-table-wrap {
+        border: 1px solid #dbe3ee;
+        border-radius: 12px;
+        background: #f8fbff;
+        overflow: hidden;
+    }
+
+    .students-table {
+        margin-bottom: 0;
+    }
+
+    .students-table th,
+    .students-table td {
+        vertical-align: middle;
+    }
+
+    .student-name {
+        font-weight: 600;
+        color: #0f172a;
+    }
+
+    .student-meta {
+        font-size: 0.78rem;
+        color: #64748b;
+    }
+
+    .readiness-cell {
+        min-width: 180px;
+    }
+
+    .readiness-progress {
+        height: 6px;
+        border-radius: 999px;
+        background: #e7edf5;
+        overflow: hidden;
+    }
+
+    .readiness-mini {
+        height: 100%;
+        border-radius: 999px;
+    }
+
+    .readiness-mini-practical {
+        background: #2563eb;
+    }
+
+    .readiness-mini-commitment {
+        background: #06b6d4;
+    }
+
+    .readiness-mini-theory {
+        background: #eab308;
+    }
+
+    .readiness-mini-profile {
+        background: #64748b;
+    }
+
+    .readiness-legend {
+        font-size: 0.76rem;
+        color: #475569;
+    }
+
+    .readiness-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 0.28rem;
+    }
+
+    .students-mobile-list {
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .students-mobile-card {
+        border: 1px solid #dbe3ee;
+        border-radius: 12px;
+        background: #f8fbff;
+        box-shadow: 2px 2px 6px rgba(148, 163, 184, 0.12), -2px -2px 6px rgba(255, 255, 255, 0.9);
+        padding: 0.75rem;
+    }
+
+    .students-mobile-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.5rem;
+        align-items: flex-start;
+        margin-bottom: 0.55rem;
+    }
+
+    .students-mobile-meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.3rem 0.6rem;
+        font-size: 0.8rem;
+        margin-bottom: 0.6rem;
+    }
+
+    .students-mobile-meta span {
+        color: #64748b;
+    }
+
+    .students-mobile-actions {
+        display: flex;
+        gap: 0.45rem;
+        margin-top: 0.7rem;
+    }
+
+    .students-mobile-actions .btn,
+    .students-mobile-actions form {
+        flex: 1;
+    }
+
+    .students-mobile-actions .btn {
+        width: 100%;
+    }
+
+    @media (max-width: 991.98px) {
+        .readiness-cell {
+            min-width: 0;
+        }
+
+        .readiness-legend {
+            font-size: 0.74rem;
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        .students-mobile-meta {
+            grid-template-columns: 1fr;
+            gap: 0.22rem;
+        }
+
+        .students-mobile-actions {
+            flex-direction: column;
+        }
+    }
+</style>
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h4">Schüler</h1>
     <a href="/students/new" class="btn btn-primary">Neuer Schüler</a>
 </div>
-<table class="table table-striped table-bordered">
+<div class="mb-3">
+    <input
+        id="students-live-search"
+        class="form-control"
+        type="search"
+        placeholder="Schüler suchen (Name, E-Mail, Fahrlehrer, Klasse)"
+        autocomplete="off"
+    >
+</div>
+<div class="students-mobile-list d-lg-none">
+    {% for student in students %}
+        {% set readiness = readiness_by_student.get(student.id) %}
+        <article class="students-mobile-card" data-student-item data-search-text="{{ (student.user.name ~ ' ' ~ student.user.email ~ ' ' ~ (student.teacher.user.name if student.teacher else '') ~ ' ' ~ (student.training_class or '') ~ ' ' ~ student.theory_status ~ ' ' ~ student.practical_status)|lower }}">
+            <div class="students-mobile-head">
+                <div>
+                    <div class="student-name">{{ student.user.name }}</div>
+                    <div class="student-meta">{{ student.user.email }}</div>
+                </div>
+                <div>
+                    {% if readiness %}
+                        {% if readiness.level == 'green' %}
+                            <span class="badge text-bg-success">{{ readiness.score }}</span>
+                        {% elif readiness.level == 'yellow' %}
+                            <span class="badge text-bg-warning">{{ readiness.score }}</span>
+                        {% else %}
+                            <span class="badge text-bg-danger">{{ readiness.score }}</span>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="students-mobile-meta">
+                <div><span>Fahrlehrer:</span> {{ student.teacher.user.name if student.teacher else '-' }}</div>
+                <div><span>Klasse:</span> {{ student.training_class or '-' }}</div>
+                <div><span>Theorie:</span> {{ student.theory_status }}</div>
+                <div><span>Praxis:</span> {{ student.practical_status }}</div>
+            </div>
+
+            {% if readiness %}
+                {% for component in readiness.components %}
+                    {% set component_class = 'readiness-mini-practical' %}
+                    {% if loop.index0 == 1 %}
+                        {% set component_class = 'readiness-mini-commitment' %}
+                    {% elif loop.index0 == 2 %}
+                        {% set component_class = 'readiness-mini-theory' %}
+                    {% elif loop.index0 == 3 %}
+                        {% set component_class = 'readiness-mini-profile' %}
+                    {% endif %}
+                    <div class="readiness-progress mb-1" role="progressbar" aria-valuenow="{{ component.value }}" aria-valuemin="0" aria-valuemax="100">
+                        <div class="readiness-mini {{ component_class }}" data-width="{{ component.value }}" title="{{ component.label }}: {{ component.value }}%"></div>
+                    </div>
+                {% endfor %}
+                <div class="readiness-legend d-flex flex-wrap gap-2">
+                    <span><span class="readiness-dot readiness-mini-practical"></span>Praxis</span>
+                    <span><span class="readiness-dot readiness-mini-commitment"></span>Termintreue</span>
+                    <span><span class="readiness-dot readiness-mini-theory"></span>Theorie</span>
+                    <span><span class="readiness-dot readiness-mini-profile"></span>Profil</span>
+                </div>
+            {% endif %}
+
+            <div class="students-mobile-actions">
+                <a class="btn btn-sm btn-secondary" href="/students/{{ student.id }}/edit">Bearbeiten</a>
+                <form method="post" action="/students/{{ student.id }}/delete" onsubmit="return confirm('Wirklich löschen?');">
+                    <button class="btn btn-sm btn-danger" type="submit">Löschen</button>
+                </form>
+            </div>
+        </article>
+    {% else %}
+        <div class="students-mobile-card text-muted">Keine Schüler vorhanden.</div>
+    {% endfor %}
+    <div id="students-mobile-empty" class="students-mobile-card text-muted d-none">Keine Treffer für die Suche.</div>
+</div>
+
+<div class="table-responsive students-table-wrap d-none d-lg-block">
+<table class="table table-striped students-table">
     <thead>
     <tr>
         <th>Name</th>
-        <th>E-Mail</th>
         <th>Fahrlehrer</th>
         <th>Klasse</th>
-        <th>Zahlungsart</th>
-        <th>Preisliste</th>
         <th>Theorie</th>
         <th>Praxis</th>
         <th>Readiness</th>
@@ -23,13 +235,13 @@
     <tbody>
     {% for student in students %}
         {% set readiness = readiness_by_student.get(student.id) %}
-        <tr>
-            <td>{{ student.user.name }}</td>
-            <td>{{ student.user.email }}</td>
+        <tr data-student-item data-search-text="{{ (student.user.name ~ ' ' ~ student.user.email ~ ' ' ~ (student.teacher.user.name if student.teacher else '') ~ ' ' ~ (student.training_class or '') ~ ' ' ~ student.theory_status ~ ' ' ~ student.practical_status)|lower }}">
+            <td>
+                <div class="student-name">{{ student.user.name }}</div>
+                <div class="student-meta">{{ student.user.email }}</div>
+            </td>
             <td>{{ student.teacher.user.name if student.teacher else '-' }}</td>
             <td>{{ student.training_class or '-' }}</td>
-            <td>{{ student.payment_method or '-' }}</td>
-            <td>{{ student.price_list or '-' }}</td>
             <td>{{ student.theory_status }}</td>
             <td>{{ student.practical_status }}</td>
             <td>
@@ -45,18 +257,26 @@
                     -
                 {% endif %}
             </td>
-            <td style="min-width: 180px;">
+            <td class="readiness-cell">
                 {% if readiness %}
                     {% for component in readiness.components %}
-                        <div class="progress mb-1" role="progressbar" aria-valuenow="{{ component.value }}" aria-valuemin="0" aria-valuemax="100" style="height: 6px;">
-                            <div class="progress-bar readiness-mini" data-width="{{ component.value }}" title="{{ component.label }}: {{ component.value }}%"></div>
+                        {% set component_class = 'readiness-mini-practical' %}
+                        {% if loop.index0 == 1 %}
+                            {% set component_class = 'readiness-mini-commitment' %}
+                        {% elif loop.index0 == 2 %}
+                            {% set component_class = 'readiness-mini-theory' %}
+                        {% elif loop.index0 == 3 %}
+                            {% set component_class = 'readiness-mini-profile' %}
+                        {% endif %}
+                        <div class="readiness-progress mb-1" role="progressbar" aria-valuenow="{{ component.value }}" aria-valuemin="0" aria-valuemax="100">
+                            <div class="readiness-mini {{ component_class }}" data-width="{{ component.value }}" title="{{ component.label }}: {{ component.value }}%"></div>
                         </div>
                     {% endfor %}
-                    <div class="small text-muted d-flex flex-wrap gap-2">
-                        <span><span class="d-inline-block rounded-circle bg-primary me-1" style="width:8px;height:8px;"></span>Praxis</span>
-                        <span><span class="d-inline-block rounded-circle bg-info me-1" style="width:8px;height:8px;"></span>Termintreue</span>
-                        <span><span class="d-inline-block rounded-circle bg-warning me-1" style="width:8px;height:8px;"></span>Theorie</span>
-                        <span><span class="d-inline-block rounded-circle bg-secondary me-1" style="width:8px;height:8px;"></span>Profil</span>
+                    <div class="readiness-legend d-flex flex-wrap gap-2">
+                        <span><span class="readiness-dot readiness-mini-practical"></span>Praxis</span>
+                        <span><span class="readiness-dot readiness-mini-commitment"></span>Termintreue</span>
+                        <span><span class="readiness-dot readiness-mini-theory"></span>Theorie</span>
+                        <span><span class="readiness-dot readiness-mini-profile"></span>Profil</span>
                     </div>
                 {% else %}
                     -
@@ -70,14 +290,61 @@
             </td>
         </tr>
     {% else %}
-        <tr><td colspan="11">Keine Schüler vorhanden.</td></tr>
+        <tr><td colspan="8">Keine Schüler vorhanden.</td></tr>
     {% endfor %}
+        <tr id="students-table-empty" class="d-none"><td colspan="8" class="text-muted">Keine Treffer für die Suche.</td></tr>
     </tbody>
 </table>
+</div>
 <script>
     document.querySelectorAll('.readiness-mini').forEach(function (bar) {
         var width = parseInt(bar.dataset.width || '0', 10);
         bar.style.width = Math.max(0, Math.min(100, width)) + '%';
     });
+
+    var searchInput = document.getElementById('students-live-search');
+    var mobileContainer = document.querySelector('.students-mobile-list');
+    var tableContainer = document.querySelector('.students-table-wrap');
+    var mobileEmpty = document.getElementById('students-mobile-empty');
+    var tableEmpty = document.getElementById('students-table-empty');
+
+    function applyStudentsFilter() {
+        var query = (searchInput && searchInput.value ? searchInput.value : '').trim().toLowerCase();
+
+        var mobileVisibleCount = 0;
+        if (mobileContainer) {
+            mobileContainer.querySelectorAll('[data-student-item]').forEach(function (card) {
+                var haystack = card.getAttribute('data-search-text') || '';
+                var visible = !query || haystack.indexOf(query) !== -1;
+                card.classList.toggle('d-none', !visible);
+                if (visible) {
+                    mobileVisibleCount += 1;
+                }
+            });
+        }
+
+        var tableVisibleCount = 0;
+        if (tableContainer) {
+            tableContainer.querySelectorAll('tbody [data-student-item]').forEach(function (row) {
+                var haystack = row.getAttribute('data-search-text') || '';
+                var visible = !query || haystack.indexOf(query) !== -1;
+                row.classList.toggle('d-none', !visible);
+                if (visible) {
+                    tableVisibleCount += 1;
+                }
+            });
+        }
+
+        if (mobileEmpty) {
+            mobileEmpty.classList.toggle('d-none', mobileVisibleCount !== 0 || !query);
+        }
+        if (tableEmpty) {
+            tableEmpty.classList.toggle('d-none', tableVisibleCount !== 0 || !query);
+        }
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', applyStudentsFilter);
+    }
 </script>
 {% endblock %}

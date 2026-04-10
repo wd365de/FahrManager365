@@ -12,7 +12,9 @@
 {% set current_path = request.url.path %}
 <header class="mobile-topbar d-lg-none">
     <div class="mobile-topbar-head">
-        <a class="mobile-brand" href="/dashboard">FahrManager 360</a>
+        <a class="mobile-brand" href="/dashboard">
+            <img src="/static/logo_fahrmanager360.png" alt="FahrManager 360" class="brand-logo-mobile">
+        </a>
         <a class="btn btn-sm btn-outline-dark" href="/logout">Logout</a>
     </div>
     <nav class="mobile-nav-main" aria-label="Mobile Hauptnavigation">
@@ -55,14 +57,16 @@
         </div>
 
         <div class="app-sidebar-panel">
-            <a class="app-brand" href="/dashboard">FahrManager 360</a>
+            <a class="app-brand" href="/dashboard">
+                <img src="/static/logo_fahrmanager360.png" alt="FahrManager 360" class="brand-logo-sidebar">
+            </a>
             <div class="sidebar-section-title">Navigation</div>
             <nav class="sidebar-nav">
                 {% if user.role == "admin" %}
                     <a class="sidebar-link{% if current_path == '/dashboard' %} active{% endif %}" href="/dashboard">
                         <span class="sidebar-link-icon">🏠</span>Dashboard
                     </a>
-                    <details class="sidebar-group" {% if current_path.startswith('/students') or current_path.startswith('/onboarding') or current_path.startswith('/teachers') or current_path.startswith('/master-data') %}open{% endif %}>
+                    <details class="sidebar-group" open>
                         <summary>Stammdaten</summary>
                         <a class="sidebar-link{% if current_path.startswith('/students') %} active{% endif %}" href="/students">
                             <span class="sidebar-link-icon">👨‍🎓</span>Schüler
@@ -77,7 +81,7 @@
                             <span class="sidebar-link-icon">🧩</span>Stammdatenfelder
                         </a>
                     </details>
-                    <details class="sidebar-group" {% if current_path.startswith('/slots') or current_path.startswith('/appointments') %}open{% endif %}>
+                    <details class="sidebar-group" open>
                         <summary>Planung</summary>
                         <a class="sidebar-link{% if current_path.startswith('/slots') %} active{% endif %}" href="/slots">
                             <span class="sidebar-link-icon">📅</span>Terminplaner
@@ -86,7 +90,7 @@
                             <span class="sidebar-link-icon">🗂️</span>Termine
                         </a>
                     </details>
-                    <details class="sidebar-group" {% if current_path.startswith('/exams/') %}open{% endif %}>
+                    <details class="sidebar-group" open>
                         <summary>Prüfungen</summary>
                         <a class="sidebar-link{% if current_path.startswith('/exams/theory') %} active{% endif %}" href="/exams/theory">
                             <span class="sidebar-link-icon">📘</span>Theorieprüfungen
