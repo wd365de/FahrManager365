@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
@@ -16,6 +17,7 @@ from app.routes.admin_routes import router as admin_router
 from app.routes.appointments_routes import router as appointments_router
 from app.routes.auth_routes import router as auth_router
 from app.routes.portal_routes import router as portal_router
+from app.routes.push_routes import router as push_router
 
 app = FastAPI(title="FahrManager 360")
 SESSION_SECRET = os.getenv("SESSION_SECRET", "fahrmanager360-local-dev-secret")
@@ -34,6 +36,11 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 @app.get("/")
 def root():
     return RedirectResponse(url="/login", status_code=302)
+
+
+@app.get("/sw.js")
+def service_worker_file():
+    return FileResponse(str(STATIC_DIR / "sw.js"), media_type="application/javascript")
 
 
 def ensure_demo_admin(db: Session) -> None:
@@ -306,3 +313,4 @@ app.include_router(auth_router)
 app.include_router(admin_router)
 app.include_router(appointments_router)
 app.include_router(portal_router)
+app.include_router(push_router)

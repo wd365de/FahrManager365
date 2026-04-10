@@ -6,6 +6,29 @@
 {% else %}
     <div class="alert alert-warning">Es ist noch kein fester Fahrlehrer zugeordnet. Bitte Admin kontaktieren.</div>
 {% endif %}
+<div class="card card-body mb-4">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+        <div>
+            <h2 class="h6 mb-1">Push-Erinnerungen aufs Handy</h2>
+            <p class="small text-muted mb-0">Aktiviere Browser-Push, um bei anstehenden Terminen schneller informiert zu werden.</p>
+        </div>
+        <span class="badge {% if push_mvp_available %}text-bg-success{% else %}text-bg-secondary{% endif %}">
+            {% if push_mvp_available %}MVP aktiv{% else %}MVP inaktiv{% endif %}
+        </span>
+    </div>
+    <p class="small text-muted mt-2 mb-2">
+        Voraussetzung: Browser-Berechtigung fuer Benachrichtigungen.
+        {% if not auto_reminders_enabled %}
+            Hinweis: Der Schalter "Automatische Terminerinnerungen" ist in den Einstellungen noch deaktiviert.
+        {% endif %}
+    </p>
+    <div class="d-flex flex-wrap gap-2">
+        <button type="button" id="push-enable-btn" class="btn btn-sm btn-primary" {% if not push_mvp_available %}disabled{% endif %}>Push aktivieren</button>
+        <button type="button" id="push-disable-btn" class="btn btn-sm btn-outline-secondary" {% if not push_mvp_available %}disabled{% endif %}>Push deaktivieren</button>
+        <button type="button" id="push-test-btn" class="btn btn-sm btn-outline-info" {% if not push_mvp_available %}disabled{% endif %}>Test-Push senden</button>
+    </div>
+    <div id="push-status" class="small mt-2 text-muted"></div>
+</div>
 <div class="card card-body mb-4 border-0" style="background: #eef4ff;">
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
         <h2 class="h5 mb-0">Prüfungsreife-Autopilot</h2>
@@ -233,5 +256,143 @@
         bar.style.height = safeHeight + '%';
         bar.style.minHeight = '8px';
     });
+
+    (function () {
+        var enableBtn = document.getElementById('push-enable-btn');
+        var disableBtn = document.getElementById('push-disable-btn');
+        var testBtn = document.getElementById('push-test-btn');
+        var statusEl = document.getElementById('push-status');
+
+        if (!enableBtn || !disableBtn || !testBtn || !statusEl) {
+            return;
+        }
+
+        function setStatus(message, isError) {
+            statusEl.textContent = message;
+            statusEl.classList.toggle('text-danger', Boolean(isError));
+            statusEl.classList.toggle('text-muted', !isError);
+        }
+
+        function urlBase64ToUint8Array(base64String) {
+            var padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+            var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            var rawData = window.atob(base64);
+            var outputArray = new Uint8Array(rawData.length);
+            for (var i = 0; i < rawData.length; i += 1) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        async function getPushConfig() {
+            var response = await fetch('/api/push/config', { credentials: 'same-origin' });
+            if (!response.ok) {
+                throw new Error('Push-Konfiguration konnte nicht geladen werden.');
+            }
+            return response.json();
+        }
+
+        async function ensureServiceWorker() {
+            if (!('serviceWorker' in navigator)) {
+                throw new Error('Service Worker wird auf diesem Geraet nicht unterstuetzt.');
+            }
+            var registration = await navigator.serviceWorker.register('/sw.js');
+            return registration;
+        }
+
+        async function enablePush() {
+            if (!('Notification' in window) || !('PushManager' in window)) {
+                throw new Error('Push wird von diesem Browser nicht unterstuetzt.');
+            }
+
+            var permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                throw new Error('Benachrichtigungsberechtigung wurde nicht erteilt.');
+            }
+
+            var config = await getPushConfig();
+            if (!config.supported || !config.public_key) {
+                throw new Error('Push ist serverseitig noch nicht konfiguriert.');
+            }
+
+            var registration = await ensureServiceWorker();
+            var existingSubscription = await registration.pushManager.getSubscription();
+            var subscription = existingSubscription;
+            if (!subscription) {
+                subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(config.public_key),
+                });
+            }
+
+            var subscribeResponse = await fetch('/api/push/subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify(subscription),
+            });
+            if (!subscribeResponse.ok) {
+                throw new Error('Subscription konnte nicht gespeichert werden.');
+            }
+
+            setStatus('Push ist jetzt aktiv. Teste die Benachrichtigung mit dem Button rechts.', false);
+        }
+
+        async function disablePush() {
+            var registration = await navigator.serviceWorker.getRegistration('/');
+            if (!registration) {
+                setStatus('Kein aktiver Push-Dienst gefunden.', false);
+                return;
+            }
+            var subscription = await registration.pushManager.getSubscription();
+            if (!subscription) {
+                setStatus('Push war bereits deaktiviert.', false);
+                return;
+            }
+
+            var unsubscribeResponse = await fetch('/api/push/unsubscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ endpoint: subscription.endpoint }),
+            });
+            if (!unsubscribeResponse.ok) {
+                throw new Error('Abmeldung konnte nicht gespeichert werden.');
+            }
+
+            await subscription.unsubscribe();
+            setStatus('Push wurde deaktiviert.', false);
+        }
+
+        async function sendTestPush() {
+            var response = await fetch('/api/push/test', {
+                method: 'POST',
+                credentials: 'same-origin',
+            });
+            var result = await response.json().catch(function () { return {}; });
+            if (!response.ok) {
+                throw new Error(result.detail || 'Test-Push konnte nicht gesendet werden.');
+            }
+            setStatus('Test-Push gesendet (' + result.sent + '/' + result.total + ').', false);
+        }
+
+        enableBtn.addEventListener('click', function () {
+            enablePush().catch(function (error) {
+                setStatus(error.message || 'Push-Aktivierung fehlgeschlagen.', true);
+            });
+        });
+
+        disableBtn.addEventListener('click', function () {
+            disablePush().catch(function (error) {
+                setStatus(error.message || 'Push-Deaktivierung fehlgeschlagen.', true);
+            });
+        });
+
+        testBtn.addEventListener('click', function () {
+            sendTestPush().catch(function (error) {
+                setStatus(error.message || 'Test-Push fehlgeschlagen.', true);
+            });
+        });
+    })();
 </script>
 {% endblock %}

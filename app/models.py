@@ -27,6 +27,7 @@ class User(Base):
 
     student = relationship("Student", back_populates="user", uselist=False)
     teacher = relationship("Teacher", back_populates="user", uselist=False)
+    push_subscriptions = relationship("PushSubscription", back_populates="user")
 
 
 class Student(Base):
@@ -176,3 +177,18 @@ class AppSetting(Base):
 
     key = Column(String(100), primary_key=True)
     value = Column(String(255), nullable=False)
+
+
+class PushSubscription(Base):
+    __tablename__ = "push_subscriptions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    endpoint = Column(Text, nullable=False, unique=True)
+    p256dh = Column(Text, nullable=False)
+    auth = Column(Text, nullable=False)
+    user_agent = Column(String(255), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User", back_populates="push_subscriptions")
