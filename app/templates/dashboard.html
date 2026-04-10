@@ -1,9 +1,326 @@
 {% extends "base.html" %}
 {% block content %}
-<h1 class="h4 mb-4">Admin Dashboard</h1>
-<div class="row g-3">
-    <div class="col-md-4"><div class="card card-body"><strong>Schüler</strong><span class="dashboard-kpi-value">{{ students_count }}</span></div></div>
-    <div class="col-md-4"><div class="card card-body"><strong>Fahrlehrer</strong><span class="dashboard-kpi-value">{{ teachers_count }}</span></div></div>
-    <div class="col-md-4"><div class="card card-body"><strong>Freie Slots</strong><span class="dashboard-kpi-value">{{ open_slots }}</span></div></div>
+<style>
+    .dashboard-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.75rem;
+        margin-bottom: 0.9rem;
+    }
+
+    .dashboard-kpi-card {
+        border: 1px solid #dbe3ee;
+        border-radius: 12px;
+        background: #f8fbff;
+        box-shadow: 2px 2px 6px rgba(148, 163, 184, 0.12), -2px -2px 6px rgba(255, 255, 255, 0.9);
+        padding: 0.75rem 0.8rem;
+    }
+
+    .dashboard-kpi-label {
+        font-size: 0.78rem;
+        color: #64748b;
+        margin-bottom: 0.2rem;
+    }
+
+    .dashboard-kpi-value {
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: #0f172a;
+        line-height: 1.1;
+    }
+
+    .dashboard-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 0.9rem;
+    }
+
+    .dashboard-panel {
+        border: 1px solid #dbe3ee;
+        border-radius: 12px;
+        background: #f8fbff;
+        box-shadow: 2px 2px 6px rgba(148, 163, 184, 0.12), -2px -2px 6px rgba(255, 255, 255, 0.9);
+        padding: 0.8rem;
+    }
+
+    .dashboard-panel-title {
+        font-size: 0.92rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 0.6rem;
+    }
+
+    .dashboard-panel canvas {
+        width: 100% !important;
+        max-height: 260px;
+    }
+
+    .dashboard-urgent-list {
+        display: grid;
+        gap: 0.5rem;
+    }
+
+    .dashboard-urgent-item {
+        border: 1px solid #d9e2ef;
+        border-radius: 10px;
+        padding: 0.52rem 0.6rem;
+        background: #fdfefe;
+    }
+
+    .dashboard-urgent-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.5rem;
+        align-items: center;
+        font-size: 0.86rem;
+        margin-bottom: 0.15rem;
+    }
+
+    .dashboard-urgent-name {
+        font-weight: 600;
+        color: #0f172a;
+    }
+
+    .dashboard-urgent-score {
+        font-weight: 700;
+        color: #be123c;
+        font-size: 0.82rem;
+    }
+
+    .dashboard-urgent-text {
+        font-size: 0.77rem;
+        color: #475569;
+        margin-bottom: 0;
+    }
+
+    @media (max-width: 991.98px) {
+        .dashboard-kpi-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .dashboard-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .dashboard-panel canvas {
+            max-height: 220px;
+        }
+    }
+</style>
+
+<h1 class="h4 mb-3">Admin Dashboard</h1>
+
+<div class="dashboard-kpi-grid">
+    <article class="dashboard-kpi-card">
+        <div class="dashboard-kpi-label">Schüler</div>
+        <div class="dashboard-kpi-value">{{ students_count }}</div>
+    </article>
+    <article class="dashboard-kpi-card">
+        <div class="dashboard-kpi-label">Fahrlehrer</div>
+        <div class="dashboard-kpi-value">{{ teachers_count }}</div>
+    </article>
+    <article class="dashboard-kpi-card">
+        <div class="dashboard-kpi-label">Termine heute</div>
+        <div class="dashboard-kpi-value">{{ today_appointments }}</div>
+    </article>
+    <article class="dashboard-kpi-card">
+        <div class="dashboard-kpi-label">Freie Slots / offene Prüfungen</div>
+        <div class="dashboard-kpi-value">{{ open_slots }} / {{ open_exam_registrations }}</div>
+    </article>
 </div>
+
+<div class="dashboard-layout">
+    <section class="dashboard-panel">
+        <h2 class="dashboard-panel-title">Termine und Absagen (30 Tage)</h2>
+        <canvas id="appointmentsTrendChart"></canvas>
+    </section>
+
+    <section class="dashboard-panel">
+        <h2 class="dashboard-panel-title">Readiness-Verteilung</h2>
+        <canvas id="readinessChart"></canvas>
+    </section>
+
+    <section class="dashboard-panel">
+        <h2 class="dashboard-panel-title">Auslastung je Fahrlehrer (7 Tage)</h2>
+        <canvas id="teacherLoadChart"></canvas>
+    </section>
+
+    <section class="dashboard-panel">
+        <h2 class="dashboard-panel-title">Handlungsbedarf (Top 5)</h2>
+        <div class="dashboard-urgent-list">
+            {% for row in urgent_students %}
+                <article class="dashboard-urgent-item">
+                    <div class="dashboard-urgent-head">
+                        <a class="dashboard-urgent-name" href="/students/{{ row.student_id }}/edit">{{ row.name }}</a>
+                        <span class="dashboard-urgent-score">Score {{ row.score }}</span>
+                    </div>
+                    <p class="dashboard-urgent-text">{{ row.next_action }}</p>
+                </article>
+            {% else %}
+                <div class="text-muted small">Keine Einträge verfügbar.</div>
+            {% endfor %}
+        </div>
+        <hr>
+        <div class="small text-muted">Absagen heute: <strong>{{ today_cancellations }}</strong></div>
+    </section>
+</div>
+
+<script id="dashboard-trend-labels" type="application/json">{{ trend_labels | tojson }}</script>
+<script id="dashboard-appointments-data" type="application/json">{{ appointments_trend_values | tojson }}</script>
+<script id="dashboard-cancel-data" type="application/json">{{ cancel_trend_values | tojson }}</script>
+<script id="dashboard-readiness-labels" type="application/json">{{ readiness_labels | tojson }}</script>
+<script id="dashboard-readiness-values" type="application/json">{{ readiness_values | tojson }}</script>
+<script id="dashboard-teacher-labels" type="application/json">{{ teacher_labels | tojson }}</script>
+<script id="dashboard-teacher-load-values" type="application/json">{{ teacher_load_values | tojson }}</script>
+
+<script>
+(() => {
+    const parseJson = function (id) {
+        const element = document.getElementById(id);
+        if (!element || !element.textContent) {
+            return [];
+        }
+        try {
+            return JSON.parse(element.textContent);
+        } catch (_error) {
+            return [];
+        }
+    };
+
+    const renderChartLoadError = function () {
+        const panels = document.querySelectorAll(".dashboard-panel");
+        panels.forEach((panel) => {
+            if (panel.querySelector("canvas") && !panel.querySelector(".dashboard-chart-error")) {
+                const note = document.createElement("div");
+                note.className = "dashboard-chart-error small text-muted mt-2";
+                note.textContent = "Diagramme konnten nicht geladen werden (Chart.js blockiert).";
+                panel.appendChild(note);
+            }
+        });
+    };
+
+    const initCharts = function () {
+        if (typeof window.Chart === "undefined") {
+            renderChartLoadError();
+            return;
+        }
+
+        const labels = parseJson("dashboard-trend-labels");
+        const appointmentsData = parseJson("dashboard-appointments-data");
+        const cancelData = parseJson("dashboard-cancel-data");
+        const readinessLabels = parseJson("dashboard-readiness-labels");
+        const readinessValues = parseJson("dashboard-readiness-values");
+        const teacherLabels = parseJson("dashboard-teacher-labels");
+        const teacherLoadValues = parseJson("dashboard-teacher-load-values");
+
+        const appointmentsCtx = document.getElementById("appointmentsTrendChart");
+        if (appointmentsCtx) {
+            new Chart(appointmentsCtx, {
+                type: "line",
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: "Termine",
+                            data: appointmentsData,
+                            borderColor: "#2563eb",
+                            backgroundColor: "rgba(37, 99, 235, 0.14)",
+                            fill: true,
+                            tension: 0.28,
+                        },
+                        {
+                            label: "Absagen",
+                            data: cancelData,
+                            borderColor: "#ef4444",
+                            backgroundColor: "rgba(239, 68, 68, 0.1)",
+                            fill: true,
+                            tension: 0.28,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: "bottom" } },
+                },
+            });
+        }
+
+        const readinessCtx = document.getElementById("readinessChart");
+        if (readinessCtx) {
+            new Chart(readinessCtx, {
+                type: "doughnut",
+                data: {
+                    labels: readinessLabels,
+                    datasets: [{
+                        data: readinessValues,
+                        backgroundColor: ["#22c55e", "#f59e0b", "#ef4444"],
+                        borderWidth: 1,
+                        borderColor: "#e2e8f0",
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: "bottom" } },
+                },
+            });
+        }
+
+        const teacherCtx = document.getElementById("teacherLoadChart");
+        if (teacherCtx) {
+            new Chart(teacherCtx, {
+                type: "bar",
+                data: {
+                    labels: teacherLabels,
+                    datasets: [{
+                        label: "Termine",
+                        data: teacherLoadValues,
+                        backgroundColor: "rgba(14, 165, 233, 0.55)",
+                        borderColor: "#0284c7",
+                        borderWidth: 1,
+                        borderRadius: 6,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } },
+                },
+            });
+        }
+    };
+
+    const loadScriptWithFallback = function (sources, onDone) {
+        const remaining = sources.slice();
+        const tryNext = function () {
+            const src = remaining.shift();
+            if (!src) {
+                onDone();
+                return;
+            }
+            const script = document.createElement("script");
+            script.src = src;
+            script.async = true;
+            script.onload = onDone;
+            script.onerror = tryNext;
+            document.head.appendChild(script);
+        };
+        tryNext();
+    };
+
+    if (typeof window.Chart !== "undefined") {
+        initCharts();
+    } else {
+        loadScriptWithFallback(
+            [
+                "https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js",
+                "https://unpkg.com/chart.js@4.4.3/dist/chart.umd.min.js",
+            ],
+            initCharts,
+        );
+    }
+})();
+</script>
 {% endblock %}
