@@ -11,12 +11,24 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-function Assert-Command {
-    param([string]$Name)
+function Resolve-CommandPath {
+    param(
+        [string]$Name,
+        [string[]]$FallbackPaths = @()
+    )
 
-    if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
-        throw "Erforderliches Kommando nicht gefunden: $Name"
+    $cmd = Get-Command $Name -ErrorAction SilentlyContinue
+    if ($cmd -and $cmd.Source) {
+        return $cmd.Source
     }
+
+    foreach ($path in $FallbackPaths) {
+        if ($path -and (Test-Path $path)) {
+            return $path
+        }
+    }
+
+    throw "Erforderliches Kommando nicht gefunden: $Name"
 }
 
 function Invoke-Step {
@@ -29,22 +41,29 @@ function Invoke-Step {
     & $Action
 }
 
-Assert-Command git
+$gitExe = Resolve-CommandPath -Name "git" -FallbackPaths @(
+    "C:\Program Files\Git\cmd\git.exe",
+    "C:\Program Files\Git\bin\git.exe",
+    "C:\Program Files (x86)\Git\cmd\git.exe",
+    "C:\Program Files (x86)\Git\bin\git.exe"
+)
 
 if ($RemoteDeploy) {
     if (-not $RemoteHost -or -not $RemoteUser -or -not $RemotePath) {
         throw "Für -RemoteDeploy sind -RemoteHost, -RemoteUser und -RemotePath erforderlich."
     }
 
-    Assert-Command ssh
+    $sshExe = Resolve-CommandPath -Name "ssh" -FallbackPaths @(
+        "C:\Windows\System32\OpenSSH\ssh.exe"
+    )
 
     Invoke-Step "Git Branch prüfen" {
-        git rev-parse --abbrev-ref HEAD
+        & $gitExe rev-parse --abbrev-ref HEAD
     }
 
     if (-not $SkipGitPull) {
         Invoke-Step "Lokales Git Pull (fast-forward only)" {
-            git pull --ff-only
+            & $gitExe pull --ff-only
         }
     }
 
@@ -73,41 +92,43 @@ if ($RemoteDeploy) {
     $sshArgs += @("$RemoteUser@$RemoteHost", $remoteCommandString)
 
     Invoke-Step "Remote Deploy auf $RemoteHost" {
-        & ssh @sshArgs
+        & $sshExe @sshArgs
     }
 
     Write-Host "`nRemote-Deploy abgeschlossen." -ForegroundColor Green
     return
 }
 
-Assert-Command docker
+$dockerExe = Resolve-CommandPath -Name "docker" -FallbackPaths @(
+    "C:\Program Files\Docker\Docker\resources\bin\docker.exe"
+)
 
 Invoke-Step "Git Branch prüfen" {
-    git rev-parse --abbrev-ref HEAD
+    & $gitExe rev-parse --abbrev-ref HEAD
 }
 
 if (-not $SkipGitPull) {
     Invoke-Step "Git Pull (fast-forward only)" {
-        git pull --ff-only
+        & $gitExe pull --ff-only
     }
 }
 
 Invoke-Step "Docker Compose Pull" {
-    docker compose pull
+    & $dockerExe compose pull
 }
 
 if (-not $SkipBuild) {
     Invoke-Step "Docker Compose Build" {
-        docker compose build
+        & $dockerExe compose build
     }
 }
 
 Invoke-Step "Docker Compose Up" {
-    docker compose up -d
+    & $dockerExe compose up -d
 }
 
 Invoke-Step "Container Status" {
-    docker compose ps
+    & $dockerExe compose ps
 }
 
 Write-Host "`nDeploy abgeschlossen." -ForegroundColor Green
