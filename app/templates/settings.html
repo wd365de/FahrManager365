@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .settings-wrap {
+        display: grid;
+        gap: 0.9rem;
+        max-width: 960px;
+    }
+
+    .settings-card {
+        border: 1px solid #dbe3ee;
+        border-radius: 12px;
+        background: #f8fbff;
+        box-shadow: 2px 2px 6px rgba(148, 163, 184, 0.12), -2px -2px 6px rgba(255, 255, 255, 0.9);
+    }
+
+    .settings-card-body {
+        padding: 0.95rem;
+    }
+
+    .settings-kicker {
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        color: #64748b;
+        text-transform: uppercase;
+        margin-bottom: 0.3rem;
+    }
+
+    .settings-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.8rem;
+        margin-bottom: 0.6rem;
+    }
+
+    .settings-title {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .settings-meta {
+        font-size: 0.78rem;
+        color: #64748b;
+        margin: 0.2rem 0 0;
+    }
+
+    .settings-switch.form-switch {
+        padding-left: 2.7rem;
+        min-width: 68px;
+    }
+
+    .settings-switch .form-check-input {
+        width: 2.3rem;
+        height: 1.25rem;
+        margin-left: -2.7rem;
+        cursor: pointer;
+    }
+
+    .settings-description {
+        color: #334155;
+        margin-bottom: 0.55rem;
+    }
+
+    .settings-option {
+        border: 1px solid #dbe3ee;
+        border-radius: 10px;
+        background: #ffffff;
+        padding: 0.7rem;
+        margin-bottom: 0.65rem;
+    }
+
+    .settings-details {
+        display: grid;
+        gap: 0.35rem;
+        margin: 0;
+        padding-left: 1.1rem;
+        color: #475569;
+        font-size: 0.87rem;
+    }
+
+    .settings-roadmap {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.6rem;
+    }
+
+    .settings-roadmap-item {
+        border: 1px dashed #cbd5e1;
+        border-radius: 10px;
+        background: #ffffff;
+        padding: 0.65rem;
+    }
+
+    .settings-roadmap-title {
+        margin: 0 0 0.2rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    .settings-roadmap-text {
+        margin: 0;
+        color: #64748b;
+        font-size: 0.78rem;
+    }
+
+    @media (max-width: 767px) {
+        .settings-roadmap {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<h1 class="h4 mb-3">Einstellungen</h1>
+
+<section class="settings-wrap">
+    <article class="settings-card">
+        <div class="settings-card-body">
+            <p class="settings-kicker">Terminplaner</p>
+            <form method="post" action="/settings">
+                <div class="settings-option">
+                    <div class="settings-head">
+                        <div>
+                            <h2 class="settings-title">{{ planner_option_label }}</h2>
+                            <p class="settings-meta">Sichtbarkeit vor Freigabe steuern</p>
+                        </div>
+                        <div class="form-check form-switch settings-switch mb-0">
+                            <input class="form-check-input" type="checkbox" role="switch" name="show_locked_slots" id="show-locked-slots" {% if show_locked_slots %}checked{% endif %}>
+                            <label class="form-check-label small text-muted" for="show-locked-slots">
+                                {% if show_locked_slots %}Aktiv{% else %}Inaktiv{% endif %}
+                            </label>
+                        </div>
+                    </div>
+
+                    <p class="settings-description">{{ planner_option_description }}</p>
+                    <details>
+                        <summary class="small text-muted">Ausführliche Beschreibung</summary>
+                        <ul class="settings-details mt-2">
+                            <li><strong>Aktiv:</strong> Schueler sehen zusaetzlich zukuenftige Slots mit Hinweis "Buchbar ab ...".</li>
+                            <li><strong>Inaktiv:</strong> Schueler sehen nur aktuell buchbare Slots.</li>
+                            <li><strong>Wichtig:</strong> Die Option aendert nicht die Buchungslogik selbst, nur die Sichtbarkeit im Portal.</li>
+                        </ul>
+                    </details>
+                </div>
+
+                <div class="settings-option">
+                    <div class="settings-head">
+                        <div>
+                            <h2 class="settings-title">{{ reminders_option_label }}</h2>
+                            <p class="settings-meta">Vorbereitung automatischer Hinweise</p>
+                        </div>
+                        <div class="form-check form-switch settings-switch mb-0">
+                            <input class="form-check-input" type="checkbox" role="switch" name="auto_reminders" id="auto-reminders" {% if auto_reminders %}checked{% endif %}>
+                            <label class="form-check-label small text-muted" for="auto-reminders">
+                                {% if auto_reminders %}Aktiv{% else %}Inaktiv{% endif %}
+                            </label>
+                        </div>
+                    </div>
+
+                    <p class="settings-description">{{ reminders_option_description }}</p>
+                    <details>
+                        <summary class="small text-muted">Ausführliche Beschreibung</summary>
+                        <ul class="settings-details mt-2">
+                            <li><strong>Aktiv:</strong> Das System markiert den Bereich fuer automatisierte Erinnerungsprozesse als freigegeben.</li>
+                            <li><strong>Inaktiv:</strong> Erinnerungen muessen manuell organisiert werden.</li>
+                            <li><strong>Hinweis:</strong> Die Schalterlogik ist jetzt schon produktiv gespeichert und kann spaeter direkt mit Mail/SMS-Workflows verbunden werden.</li>
+                        </ul>
+                    </details>
+                </div>
+
+                <div class="mt-3">
+                    <button class="btn btn-primary btn-sm" type="submit">Einstellungen speichern</button>
+                </div>
+            </form>
+        </div>
+    </article>
+
+    <article class="settings-card">
+        <div class="settings-card-body">
+            <p class="settings-kicker">Erweiterbar</p>
+            <h2 class="settings-title mb-2">Weitere Optionen vorbereiten</h2>
+            <div class="settings-roadmap">
+                <div class="settings-roadmap-item">
+                    <p class="settings-roadmap-title">Benachrichtigungen</p>
+                    <p class="settings-roadmap-text">Zentrale Steuerung fuer Erinnerungen an Schueler und Team.</p>
+                </div>
+                <div class="settings-roadmap-item">
+                    <p class="settings-roadmap-title">Portal-Sichtbarkeit</p>
+                    <p class="settings-roadmap-text">Weitere Regeln fuer welche Daten im Schuelerportal sichtbar sind.</p>
+                </div>
+                <div class="settings-roadmap-item">
+                    <p class="settings-roadmap-title">Standardwerte</p>
+                    <p class="settings-roadmap-text">Globale Voreinstellungen fuer Neu-Anlage und Prozesse.</p>
+                </div>
+                <div class="settings-roadmap-item">
+                    <p class="settings-roadmap-title">Sicherheitsoptionen</p>
+                    <p class="settings-roadmap-text">Session- und Zugriffseinstellungen pro Rolle.</p>
+                </div>
+            </div>
+        </div>
+    </article>
+</section>
+{% endblock %}

@@ -8,6 +8,7 @@ STUDENT_DIRECT_BOOKING_START_LEAD_HOURS = 48
 STUDENT_DIRECT_BOOKING_WINDOW_HOURS = 72
 
 PLANNER_SETTING_SHOW_LOCKED_SLOTS = "planner.show_locked_slots"
+PLANNER_SETTING_AUTO_REMINDERS = "planner.auto_reminders"
 MASTER_DATA_APPOINTMENT_TYPES = "master_data.appointment_types"
 MASTER_DATA_CLASSES = "master_data.classes"
 MASTER_DATA_PRODUCTS = "master_data.products"
@@ -66,6 +67,11 @@ PLANNER_SETTING_DEFINITIONS = {
         "default": "1",
         "label": "Slots vor Freigabe im Schülerportal anzeigen",
         "description": "Wenn aktiv, sehen Fahrschüler zukünftige Slots bereits vorher und erhalten den Hinweis 'Buchbar ab ...'.",
+    },
+    PLANNER_SETTING_AUTO_REMINDERS: {
+        "default": "0",
+        "label": "Automatische Terminerinnerungen aktivieren",
+        "description": "Wenn aktiv, wird der Versand von automatischen Erinnerungshinweisen für bevorstehende Termine vorbereitet.",
     },
     MASTER_DATA_APPOINTMENT_TYPES: {
         "default": "Fahrstunde\nTheorie\nPrüfung",

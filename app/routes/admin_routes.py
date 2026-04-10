@@ -33,6 +33,7 @@ from app.settings import (
     MASTER_DATA_PRODUCTS,
     MASTER_DATA_TRAINING_CATEGORIES,
     MASTER_DATA_VEHICLES,
+    PLANNER_SETTING_AUTO_REMINDERS,
     PLANNER_SETTING_DEFINITIONS,
     PLANNER_SETTING_SHOW_LOCKED_SLOTS,
 )
@@ -538,6 +539,61 @@ def master_data_import_default_products(request: Request, db: Session = Depends(
     if imported_product_names:
         set_planner_setting_value(db, MASTER_DATA_DEFAULT_PRODUCT, imported_product_names[0])
     return RedirectResponse(url="/master-data", status_code=302)
+
+
+@router.get("/settings")
+def settings_page(request: Request, db: Session = Depends(get_db)):
+    user, redirect = require_admin(request, db)
+    if redirect:
+        return redirect
+
+    planner_option = PLANNER_SETTING_DEFINITIONS.get(PLANNER_SETTING_SHOW_LOCKED_SLOTS, {})
+    reminders_option = PLANNER_SETTING_DEFINITIONS.get(PLANNER_SETTING_AUTO_REMINDERS, {})
+    show_locked_slots = get_planner_setting_bool(db, PLANNER_SETTING_SHOW_LOCKED_SLOTS)
+    auto_reminders = get_planner_setting_bool(db, PLANNER_SETTING_AUTO_REMINDERS)
+    return templates.TemplateResponse(
+        "settings.html",
+        {
+            "request": request,
+            "user": user,
+            "planner_option_label": planner_option.get("label", "Slots vor Freigabe im Schülerportal anzeigen"),
+            "planner_option_description": planner_option.get(
+                "description",
+                "Wenn aktiv, sehen Fahrschüler zukünftige Slots bereits vorher und erhalten den Hinweis 'Buchbar ab ...'.",
+            ),
+            "reminders_option_label": reminders_option.get("label", "Automatische Terminerinnerungen aktivieren"),
+            "reminders_option_description": reminders_option.get(
+                "description",
+                "Wenn aktiv, wird der Versand von automatischen Erinnerungshinweisen für bevorstehende Termine vorbereitet.",
+            ),
+            "show_locked_slots": show_locked_slots,
+            "auto_reminders": auto_reminders,
+        },
+    )
+
+
+@router.post("/settings")
+def settings_update(
+    request: Request,
+    show_locked_slots: str | None = Form(None),
+    auto_reminders: str | None = Form(None),
+    db: Session = Depends(get_db),
+):
+    _, redirect = require_admin(request, db)
+    if redirect:
+        return redirect
+
+    set_planner_setting_value(
+        db,
+        PLANNER_SETTING_SHOW_LOCKED_SLOTS,
+        "1" if show_locked_slots == "on" else "0",
+    )
+    set_planner_setting_value(
+        db,
+        PLANNER_SETTING_AUTO_REMINDERS,
+        "1" if auto_reminders == "on" else "0",
+    )
+    return RedirectResponse(url="/settings", status_code=302)
 
 
 @router.get("/dashboard")
@@ -2136,7 +2192,7 @@ def slots_settings_update(
     )
     if week_start:
         return RedirectResponse(url=f"/slots?week_start={week_start}", status_code=302)
-    return RedirectResponse(url="/slots", status_code=302)
+    return RedirectResponse(url="/settings", status_code=302)
 
 
 @router.post("/slots/new")

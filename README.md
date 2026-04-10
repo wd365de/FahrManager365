@@ -103,6 +103,29 @@ App ist danach über `http://<VPS-IP>/login` erreichbar.
 ./deploy.sh
 ```
 
+### 5) Release-Checkliste (wichtig)
+
+Für dieses Projekt gilt bei normalen Code-/UI-Änderungen:
+
+- Immer `docker compose build` ausführen (also **kein** `-SkipBuild` beim Deploy).
+- Hintergrund: `app` wird aus dem lokalen Dockerfile gebaut (`build: .`).
+- Ohne Build läuft oft weiter das alte App-Image und Änderungen in `app/templates`, `app/static`, `app/routes` sind online nicht sichtbar.
+
+Empfohlener Ablauf lokal (Windows):
+
+```powershell
+& 'C:\Program Files\Git\cmd\git.exe' add -A
+& 'C:\Program Files\Git\cmd\git.exe' commit -m "release: <beschreibung>"
+& 'C:\Program Files\Git\cmd\git.exe' push origin main
+powershell -ExecutionPolicy Bypass -File .\deploy.ps1 -RemoteDeploy -RemoteHost "v2202604349663448661.powersrv.de" -RemoteUser "root" -RemotePath "/opt/fahrmanager" -SshPort 22 -SshKeyPath "$env:USERPROFILE\.ssh\id_ed25519_deploy"
+```
+
+Optional per `release.ps1` (automatisiert Commit + Push + Deploy):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\release.ps1 -CommitMessage "release: <beschreibung>"
+```
+
 Falls nötig vorher ausführbar machen:
 
 ```bash
@@ -130,3 +153,4 @@ chmod +x deploy.sh
 - Schüler kann eigene Termine sehen und stornieren
 - Terminstatus: `booked`, `cancelled`, `done`
 - Keine Doppelbuchung (inkl. Pufferzeit)
+
