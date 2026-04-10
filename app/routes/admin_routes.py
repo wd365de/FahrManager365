@@ -546,6 +546,12 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
     if redirect:
         return redirect
 
+    now = datetime.now()
+    today = now.date()
+    tomorrow = today + timedelta(days=1)
+    start_30_days = today - timedelta(days=29)
+    start_7_days = today - timedelta(days=6)
+
     students_count = db.query(Student).count()
     teachers_count = db.query(Teacher).count()
     open_slots = (
@@ -553,6 +559,95 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
         .filter(AvailabilityWindow.end_at >= datetime.now())
         .count()
     )
+
+    appointments_30_days = (
+        db.query(Appointment)
+        .filter(
+            Appointment.start_at >= datetime.combine(start_30_days, datetime.min.time()),
+            Appointment.start_at < datetime.combine(tomorrow, datetime.min.time()),
+        )
+        .all()
+    )
+
+    trend_labels = [(start_30_days + timedelta(days=idx)).strftime("%d.%m") for idx in range(30)]
+    appointments_trend_values = [0] * 30
+    cancel_trend_values = [0] * 30
+    today_appointments = 0
+    today_cancellations = 0
+
+    for appointment in appointments_30_days:
+        day_key = appointment.start_at.date()
+        idx = (day_key - start_30_days).days
+        if 0 <= idx < 30:
+            if appointment.status in {"booked", "done"}:
+                appointments_trend_values[idx] += 1
+            if appointment.status == "cancelled":
+                cancel_trend_values[idx] += 1
+        if day_key == today:
+            if appointment.status in {"booked", "done"}:
+                today_appointments += 1
+            if appointment.status == "cancelled":
+                today_cancellations += 1
+
+    students = db.query(Student).options(joinedload(Student.user), joinedload(Student.teacher).joinedload(Teacher.user)).all()
+    student_ids = [student.id for student in students]
+    appointments_by_student: dict[int, list[Appointment]] = {student_id: [] for student_id in student_ids}
+    if student_ids:
+        student_appointments = (
+            db.query(Appointment)
+            .filter(Appointment.student_id.in_(student_ids))
+            .order_by(Appointment.start_at.asc())
+            .all()
+        )
+        for appointment in student_appointments:
+            appointments_by_student.setdefault(appointment.student_id, []).append(appointment)
+
+    readiness_by_student = {
+        student.id: calculate_student_readiness(student, appointments_by_student.get(student.id, []))
+        for student in students
+    }
+    readiness_green = sum(1 for readiness in readiness_by_student.values() if readiness.get("level") == "green")
+    readiness_yellow = sum(1 for readiness in readiness_by_student.values() if readiness.get("level") == "yellow")
+    readiness_red = sum(1 for readiness in readiness_by_student.values() if readiness.get("level") == "red")
+
+    urgent_students = []
+    for student in students:
+        readiness = readiness_by_student.get(student.id)
+        if not readiness:
+            continue
+        urgent_students.append(
+            {
+                "student_id": student.id,
+                "name": student.user.name if student.user else "-",
+                "score": readiness.get("score", 0),
+                "next_action": readiness.get("next_action", ""),
+            }
+        )
+    urgent_students.sort(key=lambda item: item["score"])
+    urgent_students = urgent_students[:5]
+
+    teachers = db.query(Teacher).options(joinedload(Teacher.user)).order_by(Teacher.id.asc()).all()
+    teacher_labels = [teacher.user.name if teacher.user else f"Fahrlehrer {teacher.id}" for teacher in teachers]
+    teacher_load_values: list[int] = []
+    for teacher in teachers:
+        teacher_load = (
+            db.query(Appointment)
+            .filter(
+                Appointment.teacher_id == teacher.id,
+                Appointment.start_at >= datetime.combine(start_7_days, datetime.min.time()),
+                Appointment.start_at < datetime.combine(tomorrow, datetime.min.time()),
+                Appointment.status.in_(["booked", "done"]),
+            )
+            .count()
+        )
+        teacher_load_values.append(teacher_load)
+
+    open_exam_registrations = (
+        db.query(ExamRegistration)
+        .filter(ExamRegistration.status.in_(["vorgeschlagen", "angemeldet", "terminiert"]))
+        .count()
+    )
+
     return templates.TemplateResponse(
         "dashboard.html",
         {
@@ -561,6 +656,17 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
             "students_count": students_count,
             "teachers_count": teachers_count,
             "open_slots": open_slots,
+            "today_appointments": today_appointments,
+            "today_cancellations": today_cancellations,
+            "open_exam_registrations": open_exam_registrations,
+            "trend_labels": trend_labels,
+            "appointments_trend_values": appointments_trend_values,
+            "cancel_trend_values": cancel_trend_values,
+            "readiness_labels": ["Grün", "Gelb", "Rot"],
+            "readiness_values": [readiness_green, readiness_yellow, readiness_red],
+            "teacher_labels": teacher_labels,
+            "teacher_load_values": teacher_load_values,
+            "urgent_students": urgent_students,
         },
     )
 

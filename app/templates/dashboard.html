@@ -165,13 +165,13 @@
     </section>
 </div>
 
-<script id="dashboard-trend-labels" type="application/json">{{ trend_labels | tojson }}</script>
-<script id="dashboard-appointments-data" type="application/json">{{ appointments_trend_values | tojson }}</script>
-<script id="dashboard-cancel-data" type="application/json">{{ cancel_trend_values | tojson }}</script>
-<script id="dashboard-readiness-labels" type="application/json">{{ readiness_labels | tojson }}</script>
-<script id="dashboard-readiness-values" type="application/json">{{ readiness_values | tojson }}</script>
-<script id="dashboard-teacher-labels" type="application/json">{{ teacher_labels | tojson }}</script>
-<script id="dashboard-teacher-load-values" type="application/json">{{ teacher_load_values | tojson }}</script>
+<script id="dashboard-trend-labels" type="application/json">{{ trend_labels | default([], true) | tojson }}</script>
+<script id="dashboard-appointments-data" type="application/json">{{ appointments_trend_values | default([], true) | tojson }}</script>
+<script id="dashboard-cancel-data" type="application/json">{{ cancel_trend_values | default([], true) | tojson }}</script>
+<script id="dashboard-readiness-labels" type="application/json">{{ readiness_labels | default([], true) | tojson }}</script>
+<script id="dashboard-readiness-values" type="application/json">{{ readiness_values | default([], true) | tojson }}</script>
+<script id="dashboard-teacher-labels" type="application/json">{{ teacher_labels | default([], true) | tojson }}</script>
+<script id="dashboard-teacher-load-values" type="application/json">{{ teacher_load_values | default([], true) | tojson }}</script>
 
 <script>
 (() => {
