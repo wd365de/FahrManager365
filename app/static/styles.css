@@ -52,9 +52,13 @@ body {
 }
 
 .mobile-nav-secondary {
-    margin-top: 0.1rem;
-    padding-top: 0.1rem;
+    margin-top: 0.12rem;
+    padding-top: 0.24rem;
     border-top: 1px solid #e2e8f0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.34rem;
+    overflow-x: visible;
 }
 
 .mobile-nav-main .mobile-nav-link {
@@ -64,8 +68,12 @@ body {
 }
 
 .mobile-nav-secondary .mobile-nav-link {
-    font-size: 0.74rem;
-    padding: 0.28rem 0.6rem;
+    font-size: 0.72rem;
+    padding: 0.32rem 0.4rem;
+    border-radius: 10px;
+    text-align: center;
+    white-space: normal;
+    line-height: 1.2;
 }
 
 .mobile-nav-links::-webkit-scrollbar {
@@ -328,7 +336,7 @@ body {
     padding: 0.35rem;
     border: 1px solid #e3e8ef;
     background: #f9fbfd;
-    box-shadow: 4px 4px 8px rgba(148, 163, 184, 0.19), -4px -4px 8px rgba(255, 255, 255, 0.92);
+    box-shadow: 5px 5px 10px rgba(148, 163, 184, 0.22), -5px -5px 10px rgba(255, 255, 255, 0.94);
 }
 
 .sidebar-group summary {
@@ -340,7 +348,7 @@ body {
     padding: 0.4rem 0.45rem;
     border-radius: 8px;
     background: #f2f5f9;
-    box-shadow: inset 1px 1px 3px rgba(255, 255, 255, 0.9), inset -1px -1px 3px rgba(148, 163, 184, 0.22);
+    box-shadow: inset 1px 1px 4px rgba(255, 255, 255, 0.92), inset -1px -1px 4px rgba(148, 163, 184, 0.26);
 }
 
 .sidebar-group summary::-webkit-details-marker {
@@ -350,7 +358,7 @@ body {
 .sidebar-group[open] {
     background: #f5f8fc;
     border-color: #dce4ee;
-    box-shadow: 3px 3px 7px rgba(148, 163, 184, 0.17), -3px -3px 7px rgba(255, 255, 255, 0.92);
+    box-shadow: 4px 4px 9px rgba(148, 163, 184, 0.2), -4px -4px 9px rgba(255, 255, 255, 0.94);
 }
 
 .sidebar-group .sidebar-link {
@@ -358,7 +366,7 @@ body {
 }
 
 .sidebar-group .sidebar-link.active {
-    box-shadow: inset 1px 1px 3px rgba(255, 255, 255, 0.78), inset -1px -1px 3px rgba(148, 163, 184, 0.19);
+    box-shadow: inset 1px 1px 4px rgba(255, 255, 255, 0.82), inset -1px -1px 4px rgba(148, 163, 184, 0.23);
 }
 
 .sidebar-footer {
@@ -863,8 +871,8 @@ body.exam-overlay-open {
     }
 
     .mobile-nav-secondary .mobile-nav-link {
-        font-size: 0.7rem;
-        padding: 0.24rem 0.5rem;
+        font-size: 0.67rem;
+        padding: 0.3rem 0.26rem;
     }
 
     .calendar-slot {

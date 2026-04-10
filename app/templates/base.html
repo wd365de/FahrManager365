@@ -32,11 +32,10 @@
         {% endif %}
     </nav>
     {% if user.role == "admin" %}
-        <nav class="mobile-nav-links mobile-nav-secondary" aria-label="Mobile Zusatznavigation">
-            <a class="mobile-nav-link{% if current_path.startswith('/exams/organizations') %} active{% endif %}" href="/exams/organizations">Organisationen</a>
-            <a class="mobile-nav-link{% if current_path.startswith('/onboarding') %} active{% endif %}" href="/onboarding">Onboarding</a>
-            <a class="mobile-nav-link{% if current_path.startswith('/teachers') %} active{% endif %}" href="/teachers">Fahrlehrer</a>
-            <a class="mobile-nav-link{% if current_path.startswith('/master-data') %} active{% endif %}" href="/master-data">Stammdaten</a>
+        <nav class="mobile-nav-links mobile-nav-secondary" aria-label="Mobile Schnellaktionen">
+            <a class="mobile-nav-link{% if current_path.startswith('/onboarding') %} active{% endif %}" href="/onboarding">+ Schüler anlegen</a>
+            <a class="mobile-nav-link{% if current_path.startswith('/slots') %} active{% endif %}" href="/slots">+ Termin planen</a>
+            <a class="mobile-nav-link{% if current_path.startswith('/exams') %} active{% endif %}" href="/exams/theory">+ Prüfung anmelden</a>
         </nav>
     {% endif %}
 </header>
