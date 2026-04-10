@@ -21,7 +21,6 @@
         <a class="mobile-nav-link mobile-nav-link-main{% if current_path == '/dashboard' %} active{% endif %}" href="/dashboard">Dashboard</a>
         {% if user.role == "admin" %}
             <a class="mobile-nav-link mobile-nav-link-main{% if current_path.startswith('/slots') %} active{% endif %}" href="/slots">Planer</a>
-            <a class="mobile-nav-link mobile-nav-link-main{% if current_path.startswith('/exams') %} active{% endif %}" href="/exams/theory">Prüfungen</a>
             <a class="mobile-nav-link mobile-nav-link-main{% if current_path.startswith('/students') %} active{% endif %}" href="/students">Schüler</a>
         {% elif user.role == "student" %}
             <a class="mobile-nav-link mobile-nav-link-main{% if current_path.startswith('/portal') %} active{% endif %}" href="/portal">Portal</a>
@@ -130,9 +129,9 @@
 <nav class="mobile-bottom-nav d-lg-none{% if user.role == 'admin' %} count-4{% elif user.role == 'student' %} count-3{% else %} count-2{% endif %}" aria-label="Mobile Schnellnavigation">
     <a class="mobile-bottom-link{% if current_path == '/dashboard' %} active{% endif %}" href="/dashboard"><span class="mobile-bottom-icon">🏠</span><span>Home</span></a>
     {% if user.role == "admin" %}
-        <a class="mobile-bottom-link{% if current_path.startswith('/onboarding') %} active{% endif %}" href="/onboarding"><span class="mobile-bottom-icon">➕</span><span>Neu</span></a>
         <a class="mobile-bottom-link{% if current_path.startswith('/slots') %} active{% endif %}" href="/slots"><span class="mobile-bottom-icon">📅</span><span>Planen</span></a>
         <a class="mobile-bottom-link{% if current_path.startswith('/exams') %} active{% endif %}" href="/exams/theory"><span class="mobile-bottom-icon">🧪</span><span>Prüfung</span></a>
+        <button type="button" class="mobile-bottom-link mobile-bottom-button{% if not (current_path == '/dashboard' or current_path.startswith('/slots') or current_path.startswith('/exams')) %} active{% endif %}" data-bs-toggle="offcanvas" data-bs-target="#mobileMoreNav" aria-controls="mobileMoreNav"><span class="mobile-bottom-icon">☰</span><span>Mehr</span></button>
     {% elif user.role == "student" %}
         <a class="mobile-bottom-link{% if current_path.startswith('/portal') %} active{% endif %}" href="/portal"><span class="mobile-bottom-icon">📘</span><span>Portal</span></a>
         <a class="mobile-bottom-link{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments"><span class="mobile-bottom-icon">🗂️</span><span>Termine</span></a>
@@ -140,6 +139,36 @@
         <a class="mobile-bottom-link{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments"><span class="mobile-bottom-icon">🗂️</span><span>Termine</span></a>
     {% endif %}
 </nav>
+{% if user.role == "admin" %}
+<div class="offcanvas offcanvas-end mobile-more-panel d-lg-none" tabindex="-1" id="mobileMoreNav" aria-labelledby="mobileMoreNavLabel">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="mobileMoreNavLabel">Mehr Navigation</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Schließen"></button>
+    </div>
+    <div class="offcanvas-body">
+        <div class="mobile-more-group">
+            <div class="mobile-more-title">Stammdaten</div>
+            <a class="mobile-more-link{% if current_path.startswith('/students') %} active{% endif %}" href="/students">Schüler</a>
+            <a class="mobile-more-link{% if current_path.startswith('/onboarding') %} active{% endif %}" href="/onboarding">Onboarding</a>
+            <a class="mobile-more-link{% if current_path.startswith('/teachers') %} active{% endif %}" href="/teachers">Fahrlehrer</a>
+            <a class="mobile-more-link{% if current_path.startswith('/master-data') %} active{% endif %}" href="/master-data">Stammdatenfelder</a>
+            <a class="mobile-more-link{% if current_path.startswith('/settings') %} active{% endif %}" href="/settings">Einstellungen</a>
+        </div>
+
+        <div class="mobile-more-group">
+            <div class="mobile-more-title">Planung</div>
+            <a class="mobile-more-link{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments">Termine</a>
+        </div>
+
+        <div class="mobile-more-group">
+            <div class="mobile-more-title">Prüfungen</div>
+            <a class="mobile-more-link{% if current_path.startswith('/exams/theory') %} active{% endif %}" href="/exams/theory">Theorieprüfungen</a>
+            <a class="mobile-more-link{% if current_path.startswith('/exams/practical') %} active{% endif %}" href="/exams/practical">Praxisprüfungen</a>
+            <a class="mobile-more-link{% if current_path.startswith('/exams/organizations') %} active{% endif %}" href="/exams/organizations">Prüforganisationen</a>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endif %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>

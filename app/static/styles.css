@@ -171,12 +171,63 @@ body {
     padding: 0.34rem 0.25rem;
 }
 
+.mobile-bottom-button {
+    width: 100%;
+    font-family: inherit;
+    cursor: pointer;
+}
+
 .mobile-bottom-icon {
     font-size: 0.86rem;
     line-height: 1;
 }
 
 .mobile-bottom-link.active {
+    color: #1e40af;
+    border-color: #bfdbfe;
+    background: #eff6ff;
+}
+
+.mobile-more-panel {
+    max-width: 360px;
+}
+
+.mobile-more-panel .offcanvas-header {
+    border-bottom: 1px solid #e2e8f0;
+    padding: 0.75rem 0.9rem;
+}
+
+.mobile-more-panel .offcanvas-body {
+    padding: 0.75rem 0.9rem;
+}
+
+.mobile-more-group {
+    margin-bottom: 0.8rem;
+}
+
+.mobile-more-title {
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #64748b;
+    margin-bottom: 0.35rem;
+}
+
+.mobile-more-link {
+    display: block;
+    text-decoration: none;
+    color: #334155;
+    border: 1px solid #dbe3ee;
+    border-radius: 9px;
+    background: #ffffff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.5rem 0.6rem;
+    margin-bottom: 0.35rem;
+}
+
+.mobile-more-link.active {
     color: #1e40af;
     border-color: #bfdbfe;
     background: #eff6ff;
@@ -776,6 +827,7 @@ body.exam-overlay-open {
 @media (max-width: 767px) {
     .app-content-auth {
         padding: 0.65rem;
+        padding-bottom: 5.4rem;
     }
 
     .portal-week-nav {
@@ -837,6 +889,10 @@ body.exam-overlay-open {
 }
 
 @media (max-width: 575px) {
+    .app-content-auth {
+        padding-bottom: 5.2rem;
+    }
+
     .mobile-topbar {
         padding: 0.55rem 0.55rem;
     }
