@@ -31,13 +31,6 @@
             <a class="mobile-nav-link mobile-nav-link-main{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments">Termine</a>
         {% endif %}
     </nav>
-    {% if user.role == "admin" %}
-        <nav class="mobile-nav-links mobile-nav-secondary" aria-label="Mobile Schnellaktionen">
-            <a class="mobile-nav-link{% if current_path.startswith('/onboarding') %} active{% endif %}" href="/onboarding">+ Schüler anlegen</a>
-            <a class="mobile-nav-link{% if current_path.startswith('/slots') %} active{% endif %}" href="/slots">+ Termin planen</a>
-            <a class="mobile-nav-link{% if current_path.startswith('/exams') %} active{% endif %}" href="/exams/theory">+ Prüfung anmelden</a>
-        </nav>
-    {% endif %}
 </header>
 <div class="app-shell">
     <aside class="app-sidebar">
@@ -134,9 +127,9 @@
 <nav class="mobile-bottom-nav d-lg-none{% if user.role == 'admin' %} count-4{% elif user.role == 'student' %} count-3{% else %} count-2{% endif %}" aria-label="Mobile Schnellnavigation">
     <a class="mobile-bottom-link{% if current_path == '/dashboard' %} active{% endif %}" href="/dashboard"><span class="mobile-bottom-icon">🏠</span><span>Home</span></a>
     {% if user.role == "admin" %}
-        <a class="mobile-bottom-link{% if current_path.startswith('/slots') %} active{% endif %}" href="/slots"><span class="mobile-bottom-icon">📅</span><span>Plan</span></a>
-        <a class="mobile-bottom-link{% if current_path.startswith('/exams') %} active{% endif %}" href="/exams/theory"><span class="mobile-bottom-icon">🧪</span><span>Prüf.</span></a>
-        <a class="mobile-bottom-link{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments"><span class="mobile-bottom-icon">🗂️</span><span>Termine</span></a>
+        <a class="mobile-bottom-link{% if current_path.startswith('/onboarding') %} active{% endif %}" href="/onboarding"><span class="mobile-bottom-icon">➕</span><span>Neu</span></a>
+        <a class="mobile-bottom-link{% if current_path.startswith('/slots') %} active{% endif %}" href="/slots"><span class="mobile-bottom-icon">📅</span><span>Planen</span></a>
+        <a class="mobile-bottom-link{% if current_path.startswith('/exams') %} active{% endif %}" href="/exams/theory"><span class="mobile-bottom-icon">🧪</span><span>Prüfung</span></a>
     {% elif user.role == "student" %}
         <a class="mobile-bottom-link{% if current_path.startswith('/portal') %} active{% endif %}" href="/portal"><span class="mobile-bottom-icon">📘</span><span>Portal</span></a>
         <a class="mobile-bottom-link{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments"><span class="mobile-bottom-icon">🗂️</span><span>Termine</span></a>
