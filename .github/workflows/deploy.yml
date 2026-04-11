@@ -35,7 +35,7 @@ jobs:
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
           ssh -i ~/.ssh/deploy_key \
-            -o StrictHostKeyChecking=yes \
+            -o StrictHostKeyChecking=accept-new \
             -o ConnectTimeout=15 \
             -p 22 \
             "$DEPLOY_USER@$DEPLOY_HOST" \
