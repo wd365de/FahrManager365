@@ -9,18 +9,22 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          port: 22
-          fingerprint: y55WK7PWMeG92NhyQRRgcB7djkoJkEyC5Jzba89WCT0
-          script: |
-            set -e
-            cd ${{ secrets.DEPLOY_PATH }}
-            git pull --ff-only
-            docker compose build
-            docker compose up -d
-            docker compose ps
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=yes \
+            -p 22 \
+            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+            "set -e &&
+             cd ${{ secrets.DEPLOY_PATH }} &&
+             git pull --ff-only &&
+             docker compose build &&
+             docker compose up -d &&
+             docker compose ps"
