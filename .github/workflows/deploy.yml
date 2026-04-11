@@ -10,33 +10,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Setup SSH
-        env:
-          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
         run: |
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-
-          echo "--- Key file size: $(wc -c < ~/.ssh/deploy_key) bytes ---"
-          echo "--- First line: $(head -1 ~/.ssh/deploy_key) ---"
-
-          ssh-keyscan -T 10 -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>&1 || echo "ssh-keyscan warning (non-fatal)"
-          echo "--- known_hosts entries: $(wc -l < ~/.ssh/known_hosts) ---"
-
-          ssh-keygen -lf ~/.ssh/deploy_key || echo "ssh-keygen warning: key may be malformed"
+          echo "Key size: $(wc -c < ~/.ssh/deploy_key) bytes"
+          ssh-keyscan -T 10 -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
 
       - name: Deploy
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
           ssh -i ~/.ssh/deploy_key \
             -o StrictHostKeyChecking=accept-new \
             -o ConnectTimeout=15 \
             -p 22 \
-            "$DEPLOY_USER@$DEPLOY_HOST" \
-            "set -e && cd $DEPLOY_PATH && git pull --ff-only && docker compose build && docker compose up -d && docker compose ps"
+            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+            "set -e && cd ${{ secrets.DEPLOY_PATH }} && git pull --ff-only && docker compose build && docker compose up -d && docker compose ps"
