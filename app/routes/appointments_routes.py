@@ -142,6 +142,9 @@ def book_appointment(
 
     requires_teacher_confirmation = start_dt > direct_booking_until
 
+    if datetime.now() < window.bookable_from:
+        return RedirectResponse(url="/portal", status_code=302)
+
     if start_dt < window.start_at or end_dt > window.end_at:
         return RedirectResponse(url="/portal", status_code=302)
 
@@ -194,7 +197,7 @@ def cancel_appointment(appointment_id: int, request: Request, db: Session = Depe
         return RedirectResponse(url="/appointments", status_code=302)
 
     appointment.status = "cancelled"
-    appointment.is_read_by_student = True
+    appointment.is_read_by_student = is_owner_student
     appointment.is_closed = True
 
     db.commit()

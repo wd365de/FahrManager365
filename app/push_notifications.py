@@ -28,9 +28,8 @@ def send_push_payload(subscription: PushSubscription, payload: dict[str, Any]) -
     if webpush is None:
         return False
 
-    vapid_public_key = get_vapid_public_key()
     vapid_private_key = os.getenv(VAPID_PRIVATE_KEY_ENV, "").strip()
-    if not vapid_public_key or not vapid_private_key:
+    if not get_vapid_public_key() or not vapid_private_key:
         return False
 
     subscription_info = {
@@ -49,7 +48,6 @@ def send_push_payload(subscription: PushSubscription, payload: dict[str, Any]) -
             data=json.dumps(payload),
             vapid_private_key=vapid_private_key,
             vapid_claims={"sub": vapid_claims_sub},
-            vapid_public_key=vapid_public_key,
         )
         return True
     except WebPushException:

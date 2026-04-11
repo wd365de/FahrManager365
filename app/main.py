@@ -5,6 +5,9 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 

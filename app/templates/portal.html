@@ -23,9 +23,9 @@
         {% endif %}
     </p>
     <div class="d-flex flex-wrap gap-2">
-        <button type="button" id="push-enable-btn" class="btn btn-sm btn-primary" {% if not push_mvp_available %}disabled{% endif %}>Push aktivieren</button>
-        <button type="button" id="push-disable-btn" class="btn btn-sm btn-outline-secondary" {% if not push_mvp_available %}disabled{% endif %}>Push deaktivieren</button>
-        <button type="button" id="push-test-btn" class="btn btn-sm btn-outline-info" {% if not push_mvp_available %}disabled{% endif %}>Test-Push senden</button>
+        <button type="button" id="push-enable-btn" class="btn btn-sm btn-primary">Push aktivieren</button>
+        <button type="button" id="push-disable-btn" class="btn btn-sm btn-outline-secondary">Push deaktivieren</button>
+        <button type="button" id="push-test-btn" class="btn btn-sm btn-outline-info">Test-Push senden</button>
     </div>
     <div id="push-status" class="small mt-2 text-muted"></div>
 </div>
@@ -245,6 +245,8 @@
         </div>
     </div>
 </div>
+<script id="portal-push-mvp-available" type="application/json">{{ push_mvp_available | tojson }}</script>
+<script id="portal-auto-reminders-enabled" type="application/json">{{ auto_reminders_enabled | tojson }}</script>
 <script>
     document.querySelectorAll('.readiness-progress').forEach(function (bar) {
         var width = parseInt(bar.dataset.width || '0', 10);
@@ -258,6 +260,20 @@
     });
 
     (function () {
+        function parseJson(id, fallbackValue) {
+            var element = document.getElementById(id);
+            if (!element || !element.textContent) {
+                return fallbackValue;
+            }
+            try {
+                return JSON.parse(element.textContent);
+            } catch (_error) {
+                return fallbackValue;
+            }
+        }
+
+        var pushMvpAvailable = parseJson('portal-push-mvp-available', false);
+        var autoRemindersEnabled = parseJson('portal-auto-reminders-enabled', false);
         var enableBtn = document.getElementById('push-enable-btn');
         var disableBtn = document.getElementById('push-disable-btn');
         var testBtn = document.getElementById('push-test-btn');
@@ -271,6 +287,15 @@
             statusEl.textContent = message;
             statusEl.classList.toggle('text-danger', Boolean(isError));
             statusEl.classList.toggle('text-muted', !isError);
+        }
+
+        function ensureFeatureEnabled() {
+            if (!autoRemindersEnabled) {
+                throw new Error('Bitte zuerst in Einstellungen "Automatische Terminerinnerungen" aktivieren.');
+            }
+            if (!pushMvpAvailable) {
+                throw new Error('Push ist serverseitig noch nicht konfiguriert (VAPID-Keys fehlen).');
+            }
         }
 
         function urlBase64ToUint8Array(base64String) {
@@ -301,6 +326,7 @@
         }
 
         async function enablePush() {
+            ensureFeatureEnabled();
             if (!('Notification' in window) || !('PushManager' in window)) {
                 throw new Error('Push wird von diesem Browser nicht unterstuetzt.');
             }
@@ -365,6 +391,7 @@
         }
 
         async function sendTestPush() {
+            ensureFeatureEnabled();
             var response = await fetch('/api/push/test', {
                 method: 'POST',
                 credentials: 'same-origin',
@@ -374,6 +401,14 @@
                 throw new Error(result.detail || 'Test-Push konnte nicht gesendet werden.');
             }
             setStatus('Test-Push gesendet (' + result.sent + '/' + result.total + ').', false);
+        }
+
+        if (!autoRemindersEnabled) {
+            setStatus('Hinweis: In den Einstellungen ist "Automatische Terminerinnerungen" aktuell deaktiviert.', true);
+        } else if (!pushMvpAvailable) {
+            setStatus('Hinweis: Server-Konfiguration fehlt (VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY).', true);
+        } else {
+            setStatus('Push-Bereich ist bereit. Du kannst jetzt aktivieren und einen Test senden.', false);
         }
 
         enableBtn.addEventListener('click', function () {

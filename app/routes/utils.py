@@ -83,6 +83,7 @@ def build_booking_options(
                     cursor >= now
                     and not has_overlap
                     and cursor <= request_booking_until
+                    and (can_book_now or include_locked_slots)
                 ):
                     booking_mode = "book" if cursor <= direct_booking_until else "request"
                     requires_teacher_confirmation = booking_mode == "request"

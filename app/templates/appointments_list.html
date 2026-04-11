@@ -1,49 +1,188 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+    .appointments-table-wrap {
+        border: 1px solid #dbe3ee;
+        border-radius: 12px;
+        background: #f8fbff;
+        overflow: hidden;
+    }
+
+    .appointments-table {
+        margin-bottom: 0;
+    }
+
+    .appointments-table th,
+    .appointments-table td {
+        vertical-align: middle;
+    }
+
+    .appt-name {
+        font-weight: 600;
+        color: #0f172a;
+    }
+
+    .appt-meta {
+        font-size: 0.78rem;
+        color: #64748b;
+    }
+
+    .appointments-mobile-list {
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .appointments-mobile-card {
+        border: 1px solid #dbe3ee;
+        border-radius: 12px;
+        background: #f8fbff;
+        box-shadow: 2px 2px 6px rgba(148, 163, 184, 0.12), -2px -2px 6px rgba(255, 255, 255, 0.9);
+        padding: 0.75rem;
+    }
+
+    .appointments-mobile-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.5rem;
+        align-items: flex-start;
+        margin-bottom: 0.5rem;
+    }
+
+    .appointments-mobile-meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.3rem 0.6rem;
+        font-size: 0.8rem;
+        margin-bottom: 0.6rem;
+    }
+
+    .appointments-mobile-meta span {
+        color: #64748b;
+    }
+
+    .appointments-mobile-actions {
+        display: flex;
+        gap: 0.45rem;
+        margin-top: 0.6rem;
+    }
+
+    .appointments-mobile-actions form {
+        flex: 1;
+    }
+
+    .appointments-mobile-actions .btn {
+        width: 100%;
+    }
+
+    @media (max-width: 575.98px) {
+        .appointments-mobile-meta {
+            grid-template-columns: 1fr;
+            gap: 0.22rem;
+        }
+
+        .appointments-mobile-actions {
+            flex-direction: column;
+        }
+    }
+</style>
+
 <h1 class="h4 mb-3">Termine</h1>
-<table class="table table-striped table-bordered">
-    <thead>
-    <tr><th>Schüler</th><th>Fahrlehrer</th><th>Start</th><th>Ende</th><th>Dauer</th><th>Status</th><th>Aktion</th></tr>
-    </thead>
-    <tbody>
-    {% for appointment in appointments %}
-        <tr>
-            <td>{{ appointment.student.user.name }}</td>
-            <td>{{ appointment.teacher.user.name }}</td>
-            <td>{{ appointment.start_at }}</td>
-            <td>{{ appointment.end_at }}</td>
-            <td>{{ appointment.duration_min }} min</td>
-            <td>
-                {% if appointment.status == 'booked' and appointment.requires_teacher_confirmation %}
-                    angefragt
-                {% elif appointment.status == 'booked' %}
-                    bestätigt
-                {% else %}
-                    {{ appointment.status }}
-                {% endif %}
-            </td>
-            <td>
-                {% if appointment.status == 'booked' %}
-                    {% if appointment.requires_teacher_confirmation and (user.role == 'teacher' or user.role == 'admin') %}
-                        <div class="d-flex gap-1">
-                            <form method="post" action="/appointments/{{ appointment.id }}/confirm">
-                                <button class="btn btn-sm btn-success" type="submit">Bestätigen</button>
-                            </form>
-                            <form method="post" action="/appointments/{{ appointment.id }}/reject">
-                                <button class="btn btn-sm btn-outline-danger" type="submit">Ablehnen</button>
-                            </form>
-                        </div>
-                    {% else %}
-                        <form method="post" action="/appointments/{{ appointment.id }}/cancel">
-                            <button class="btn btn-sm btn-warning" type="submit">Stornieren</button>
-                        </form>
-                    {% endif %}
-                {% endif %}
-            </td>
-        </tr>
+
+{% macro status_badge(appointment) %}
+    {% if appointment.status == 'booked' and appointment.requires_teacher_confirmation %}
+        <span class="badge text-bg-warning">angefragt</span>
+    {% elif appointment.status == 'booked' %}
+        <span class="badge text-bg-success">bestätigt</span>
+    {% elif appointment.status == 'cancelled' %}
+        <span class="badge text-bg-secondary">storniert</span>
+    {% elif appointment.status == 'done' %}
+        <span class="badge text-bg-info">abgeschlossen</span>
     {% else %}
-        <tr><td colspan="7">Keine Termine vorhanden.</td></tr>
+        <span class="badge text-bg-light text-dark">{{ appointment.status }}</span>
+    {% endif %}
+{% endmacro %}
+
+{% macro action_buttons(appointment) %}
+    {% if appointment.status == 'booked' %}
+        {% if appointment.requires_teacher_confirmation and (user.role == 'teacher' or user.role == 'admin') %}
+            <form method="post" action="/appointments/{{ appointment.id }}/confirm">
+                <button class="btn btn-sm btn-success" type="submit">Bestätigen</button>
+            </form>
+            <form method="post" action="/appointments/{{ appointment.id }}/reject">
+                <button class="btn btn-sm btn-outline-danger" type="submit">Ablehnen</button>
+            </form>
+        {% else %}
+            <form method="post" action="/appointments/{{ appointment.id }}/cancel">
+                <button class="btn btn-sm btn-warning" type="submit">Stornieren</button>
+            </form>
+        {% endif %}
+    {% endif %}
+{% endmacro %}
+
+{# ── Mobile cards ── #}
+<div class="appointments-mobile-list d-lg-none">
+    {% for appointment in appointments %}
+        <article class="appointments-mobile-card">
+            <div class="appointments-mobile-head">
+                <div>
+                    <div class="appt-name">{{ appointment.student.user.name }}</div>
+                    <div class="appt-meta">{{ appointment.teacher.user.name }}</div>
+                </div>
+                <div>{{ status_badge(appointment) }}</div>
+            </div>
+
+            <div class="appointments-mobile-meta">
+                <div><span>Start:</span> {{ appointment.start_at.strftime('%d.%m.%Y %H:%M') }}</div>
+                <div><span>Ende:</span> {{ appointment.end_at.strftime('%H:%M') }}</div>
+                <div><span>Dauer:</span> {{ appointment.duration_min }} min</div>
+            </div>
+
+            {% if appointment.status == 'booked' %}
+                <div class="appointments-mobile-actions">
+                    {{ action_buttons(appointment) }}
+                </div>
+            {% endif %}
+        </article>
+    {% else %}
+        <div class="appointments-mobile-card text-muted">Keine Termine vorhanden.</div>
     {% endfor %}
-    </tbody>
-</table>
+</div>
+
+{# ── Desktop table ── #}
+<div class="table-responsive appointments-table-wrap d-none d-lg-block">
+    <table class="table table-striped appointments-table">
+        <thead>
+            <tr>
+                <th>Schüler</th>
+                <th>Fahrlehrer</th>
+                <th>Start</th>
+                <th>Ende</th>
+                <th>Dauer</th>
+                <th>Status</th>
+                <th>Aktion</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for appointment in appointments %}
+            <tr>
+                <td>
+                    <div class="appt-name">{{ appointment.student.user.name }}</div>
+                </td>
+                <td>{{ appointment.teacher.user.name }}</td>
+                <td>{{ appointment.start_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                <td>{{ appointment.end_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                <td>{{ appointment.duration_min }} min</td>
+                <td>{{ status_badge(appointment) }}</td>
+                <td>
+                    <div class="d-flex gap-1">
+                        {{ action_buttons(appointment) }}
+                    </div>
+                </td>
+            </tr>
+        {% else %}
+            <tr><td colspan="7" class="text-muted">Keine Termine vorhanden.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}
