@@ -16,6 +16,7 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: 22
+          fingerprint: y55WK7PWMeG92NhyQRRgcB7djkoJkEyC5Jzba89WCT0
           script: |
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
