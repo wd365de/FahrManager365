@@ -34,6 +34,13 @@ def notify_admins(db: Any, title: str, body: str) -> None:
             send_push_payload(sub, {"title": title, "body": body})
 
 
+def notify_user(db: Any, user_id: int, title: str, body: str) -> None:
+    """Send a push notification to a specific user."""
+    subs = db.query(PushSubscription).filter(PushSubscription.user_id == user_id).all()
+    for sub in subs:
+        send_push_payload(sub, {"title": title, "body": body})
+
+
 def send_push_payload(subscription: PushSubscription, payload: dict[str, Any]) -> bool:
     if webpush is None:
         return False

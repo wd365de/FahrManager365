@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Appointment, AvailabilityWindow, User
-from app.push_notifications import has_push_config, notify_admins
+from app.push_notifications import has_push_config, notify_admins, notify_user
 from app.whatsapp import (
     has_whatsapp_config,
     notify_appointment_booked,
@@ -231,8 +231,10 @@ def book_appointment(
     if student and student.whatsapp_opted_in and student.whatsapp_phone and has_whatsapp_config():
         notify_appointment_booked(student_name, student.whatsapp_phone, start_fmt)
 
-    # Push + E-Mail an Admins
+    # Push an Admins + Fahrlehrer
     notify_admins(db, "Neue Terminanfrage", f"{student_name} – {start_fmt}")
+    if teacher:
+        notify_user(db, teacher.user_id, "Neue Terminanfrage", f"{student_name} – {start_fmt}")
     send_booking_notification_email(db, appointment, is_request=True)
 
     return RedirectResponse(url="/portal", status_code=302)
@@ -260,6 +262,24 @@ def cancel_appointment(appointment_id: int, request: Request, db: Session = Depe
     appointment.is_closed = True
 
     db.commit()
+    db.refresh(appointment)
+
+    start_fmt = appointment.start_at.strftime("%d.%m.%Y um %H:%M Uhr")
+    student = appointment.student
+    teacher = appointment.teacher
+
+    if is_owner_student:
+        # Schüler hat storniert → Push an Admin + Fahrlehrer
+        notify_admins(db, "Termin storniert", f"{student.user.name if student else 'Schüler'} – {start_fmt}")
+        if teacher:
+            notify_user(db, teacher.user_id, "Termin storniert", f"{student.user.name if student else 'Schüler'} – {start_fmt}")
+    else:
+        # Admin oder Fahrlehrer hat storniert → Push + WhatsApp an Schüler
+        if student:
+            notify_user(db, student.user_id, "Termin storniert", f"Dein Termin am {start_fmt} wurde storniert.")
+            if student.whatsapp_opted_in and student.whatsapp_phone and has_whatsapp_config():
+                notify_appointment_cancelled(student.user.name, student.whatsapp_phone, start_fmt)
+
     if user.role == "student":
         return RedirectResponse(url="/portal", status_code=302)
     return RedirectResponse(url="/appointments", status_code=302)
@@ -283,11 +303,14 @@ def confirm_appointment(appointment_id: int, request: Request, db: Session = Dep
     appointment.requires_teacher_confirmation = False
     appointment.is_read_by_student = False
     db.commit()
+    db.refresh(appointment)
 
     student = appointment.student
-    if student and student.whatsapp_opted_in and student.whatsapp_phone:
-        start_fmt = appointment.start_at.strftime("%d.%m.%Y um %H:%M Uhr")
-        notify_appointment_confirmed(student.user.name, student.whatsapp_phone, start_fmt)
+    start_fmt = appointment.start_at.strftime("%d.%m.%Y um %H:%M Uhr")
+    if student:
+        notify_user(db, student.user_id, "Termin bestätigt", f"Dein Termin am {start_fmt} wurde bestätigt ✓")
+        if student.whatsapp_opted_in and student.whatsapp_phone and has_whatsapp_config():
+            notify_appointment_confirmed(student.user.name, student.whatsapp_phone, start_fmt)
 
     return RedirectResponse(url="/appointments", status_code=302)
 
@@ -314,9 +337,11 @@ def reject_appointment(appointment_id: int, request: Request, db: Session = Depe
     db.commit()
     db.refresh(appointment)
     student = appointment.student
-    if student and student.whatsapp_opted_in and student.whatsapp_phone and has_whatsapp_config():
-        start_fmt = appointment.start_at.strftime("%d.%m.%Y um %H:%M Uhr")
-        notify_appointment_cancelled(student.user.name, student.whatsapp_phone, start_fmt)
+    start_fmt = appointment.start_at.strftime("%d.%m.%Y um %H:%M Uhr")
+    if student:
+        notify_user(db, student.user_id, "Termin abgelehnt", f"Dein Termin am {start_fmt} wurde leider abgelehnt.")
+        if student.whatsapp_opted_in and student.whatsapp_phone and has_whatsapp_config():
+            notify_appointment_cancelled(student.user.name, student.whatsapp_phone, start_fmt)
     return RedirectResponse(url="/appointments", status_code=302)
 
 
