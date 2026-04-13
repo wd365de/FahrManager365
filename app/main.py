@@ -21,6 +21,7 @@ from app.routes.appointments_routes import router as appointments_router
 from app.routes.auth_routes import router as auth_router
 from app.routes.portal_routes import router as portal_router
 from app.routes.push_routes import router as push_router
+from app.routes.theme_routes import router as theme_router
 
 app = FastAPI(title="FahrManager 360")
 SESSION_SECRET = os.getenv("SESSION_SECRET", "fahrmanager360-local-dev-secret")
@@ -344,3 +345,4 @@ app.include_router(admin_router)
 app.include_router(appointments_router)
 app.include_router(portal_router)
 app.include_router(push_router)
+app.include_router(theme_router)

@@ -10,6 +10,8 @@ STUDENT_DIRECT_BOOKING_WINDOW_HOURS = 72
 PLANNER_SETTING_SHOW_LOCKED_SLOTS = "planner.show_locked_slots"
 PLANNER_SETTING_AUTO_REMINDERS = "planner.auto_reminders"
 SCHOOL_WHATSAPP_NUMBER = "school.whatsapp_number"
+SCHOOL_NAME = "school.name"
+SCHOOL_PRIMARY_COLOR = "school.primary_color"
 MASTER_DATA_APPOINTMENT_TYPES = "master_data.appointment_types"
 MASTER_DATA_CLASSES = "master_data.classes"
 MASTER_DATA_PRODUCTS = "master_data.products"
@@ -64,6 +66,16 @@ VIP-Service|Zusatzangebote
 VIP-Service B96|Zusatzangebote"""
 
 PLANNER_SETTING_DEFINITIONS = {
+    SCHOOL_NAME: {
+        "default": "Fahrschule",
+        "label": "Name der Fahrschule",
+        "description": "Wird in der Seitenleiste und im Schülerportal angezeigt.",
+    },
+    SCHOOL_PRIMARY_COLOR: {
+        "default": "#e11d48",
+        "label": "Schulfarbe (Hex-Code)",
+        "description": "Primärfarbe der Oberfläche, z. B. #e11d48 (Rot), #2563eb (Blau), #16a34a (Grün).",
+    },
     SCHOOL_WHATSAPP_NUMBER: {
         "default": "",
         "label": "WhatsApp-Nummer der Fahrschule",
