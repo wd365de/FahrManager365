@@ -1463,6 +1463,8 @@ def students_update(
     theory_status: str = Form(...),
     practical_status: str = Form(...),
     notes: str = Form(""),
+    whatsapp_phone: str = Form(""),
+    whatsapp_opted_in: str = Form(""),
     db: Session = Depends(get_db),
 ):
     _, redirect = require_admin(request, db)
