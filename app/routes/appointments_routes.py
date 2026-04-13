@@ -5,6 +5,7 @@ import smtplib
 from email.message import EmailMessage
 
 from fastapi import APIRouter, Depends, Form, Request
+from sqlalchemy.exc import IntegrityError
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -170,7 +171,11 @@ def book_appointment(
         is_request_seen_by_admin=not requires_teacher_confirmation,
     )
     db.add(appointment)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        return RedirectResponse(url="/portal", status_code=302)
 
     if requires_teacher_confirmation:
         db.refresh(appointment)

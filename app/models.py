@@ -136,9 +136,7 @@ class Appointment(Base):
     student = relationship("Student", back_populates="appointments")
     teacher = relationship("Teacher", back_populates="appointments")
 
-    __table_args__ = (
-        UniqueConstraint("teacher_id", "start_at", "end_at", name="uq_teacher_appointment"),
-    )
+    __table_args__ = ()
 
 
 class ExamInspector(Base):

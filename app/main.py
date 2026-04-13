@@ -304,6 +304,21 @@ def run_local_schema_migrations() -> None:
             with engine.begin() as connection:
                 connection.execute(text("ALTER TABLE students ADD COLUMN whatsapp_opted_in BOOLEAN NOT NULL DEFAULT FALSE"))
 
+    # Replace uq_teacher_appointment with a partial unique index (booked only),
+    # so cancelled slots can be re-booked without a DB constraint violation.
+    if inspector.has_table("appointments"):
+        with engine.begin() as connection:
+            if engine.dialect.name == "postgresql":
+                connection.execute(text(
+                    "ALTER TABLE appointments DROP CONSTRAINT IF EXISTS uq_teacher_appointment"
+                ))
+            else:
+                connection.execute(text("DROP INDEX IF EXISTS uq_teacher_appointment"))
+            connection.execute(text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_teacher_appointment "
+                "ON appointments (teacher_id, start_at, end_at) WHERE status = 'booked'"
+            ))
+
 
 @app.on_event("startup")
 def on_startup() -> None:
