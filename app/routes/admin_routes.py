@@ -1644,26 +1644,102 @@ def teachers_create(
     whatsapp_phone: str = Form(""),
     db: Session = Depends(get_db),
 ):
-    _, redirect = require_admin(request, db)
+    admin_user, redirect = require_admin(request, db)
     if redirect:
         return redirect
 
     if db.query(User).filter(User.email == email).first():
-        return RedirectResponse(url="/teachers", status_code=302)
+        teachers = db.query(Teacher).join(User).order_by(User.name.asc()).all()
+        return templates.TemplateResponse(
+            "teachers_list.html",
+            {"request": request, "user": admin_user, "teachers": teachers,
+             "error": f"E-Mail '{email}' wird bereits verwendet."},
+            status_code=400,
+        )
 
-    user = User(
-        name=name,
-        email=email,
+    new_user = User(
+        name=name.strip(),
+        email=email.strip(),
         password_hash=hash_password(password),
         role="teacher",
     )
-    db.add(user)
+    db.add(new_user)
     db.flush()
 
     cleaned = "".join(c for c in whatsapp_phone if c.isdigit())
-    teacher = Teacher(user_id=user.id, whatsapp_phone=cleaned or None)
+    teacher = Teacher(user_id=new_user.id, whatsapp_phone=cleaned or None)
     db.add(teacher)
     db.commit()
+    return RedirectResponse(url="/teachers", status_code=302)
+
+
+@router.post("/teachers/{teacher_id}/edit")
+def teacher_edit(
+    teacher_id: int,
+    request: Request,
+    name: str = Form(...),
+    email: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    admin_user, redirect = require_admin(request, db)
+    if redirect:
+        return redirect
+
+    teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
+    if not teacher:
+        return RedirectResponse(url="/teachers", status_code=302)
+
+    conflict = db.query(User).filter(User.email == email.strip(), User.id != teacher.user_id).first()
+    if conflict:
+        teachers = db.query(Teacher).join(User).order_by(User.name.asc()).all()
+        return templates.TemplateResponse(
+            "teachers_list.html",
+            {"request": request, "user": admin_user, "teachers": teachers,
+             "error": f"E-Mail '{email}' wird bereits verwendet.", "edit_teacher_id": teacher_id},
+            status_code=400,
+        )
+
+    teacher.user.name = name.strip()
+    teacher.user.email = email.strip()
+    db.commit()
+    return RedirectResponse(url="/teachers", status_code=302)
+
+
+@router.post("/teachers/{teacher_id}/password")
+def teacher_password_reset(
+    teacher_id: int,
+    request: Request,
+    password: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    _, redirect = require_admin(request, db)
+    if redirect:
+        return redirect
+
+    teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
+    if teacher:
+        teacher.user.password_hash = hash_password(password)
+        db.commit()
+    return RedirectResponse(url="/teachers", status_code=302)
+
+
+@router.post("/teachers/{teacher_id}/delete")
+def teacher_delete(
+    teacher_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    _, redirect = require_admin(request, db)
+    if redirect:
+        return redirect
+
+    teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
+    if teacher:
+        user = teacher.user
+        db.delete(teacher)
+        db.flush()
+        db.delete(user)
+        db.commit()
     return RedirectResponse(url="/teachers", status_code=302)
 
 
