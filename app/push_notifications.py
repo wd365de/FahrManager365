@@ -24,6 +24,16 @@ def has_push_config() -> bool:
     return bool(get_vapid_public_key() and os.getenv(VAPID_PRIVATE_KEY_ENV, "").strip())
 
 
+def notify_admins(db: Any, title: str, body: str) -> None:
+    """Send a push notification to all admin users who have push subscriptions."""
+    from app.models import User
+    admins = db.query(User).filter(User.role == "admin").all()
+    for admin in admins:
+        subs = db.query(PushSubscription).filter(PushSubscription.user_id == admin.id).all()
+        for sub in subs:
+            send_push_payload(sub, {"title": title, "body": body})
+
+
 def send_push_payload(subscription: PushSubscription, payload: dict[str, Any]) -> bool:
     if webpush is None:
         return False

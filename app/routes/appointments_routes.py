@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Appointment, AvailabilityWindow, User
+from app.push_notifications import notify_admins
 from app.settings import ALLOWED_APPOINTMENT_DURATIONS, BOOKING_BUFFER_MINUTES
 from app.settings import STUDENT_DIRECT_BOOKING_START_LEAD_HOURS, STUDENT_DIRECT_BOOKING_WINDOW_HOURS
 from app.routes.utils import (
@@ -26,7 +27,7 @@ TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
-def send_request_notification_email(db: Session, appointment: Appointment) -> None:
+def send_booking_notification_email(db: Session, appointment: Appointment, is_request: bool) -> None:
     smtp_host = os.getenv("SMTP_HOST", "").strip()
     if not smtp_host:
         return
@@ -51,25 +52,33 @@ def send_request_notification_email(db: Session, appointment: Appointment) -> No
 
     student_name = appointment.student.user.name if appointment.student and appointment.student.user else "Unbekannt"
     teacher_name = appointment.teacher.user.name if appointment.teacher and appointment.teacher.user else "Unbekannt"
-    request_text = (appointment.request_message or "").strip() or "(kein Text)"
+
+    if is_request:
+        subject = "Neue Fahrstunden-Anfrage"
+        intro = "Es wurde eine neue Fahrstunden-Anfrage gestellt."
+        request_text = (appointment.request_message or "").strip() or "(kein Text)"
+        extra_lines = ["", f"Anfrage: {request_text}"]
+    else:
+        subject = "Neuer Termin gebucht"
+        intro = "Ein Schüler hat einen Termin direkt gebucht."
+        extra_lines = []
 
     message = EmailMessage()
-    message["Subject"] = "Neue Fahrstunden-Anfrage"
+    message["Subject"] = subject
     message["From"] = smtp_from
     message["To"] = ", ".join(recipients)
     message.set_content(
         "\n".join(
             [
-                "Es wurde eine neue Fahrstunden-Anfrage gestellt.",
+                intro,
                 "",
                 f"Schüler: {student_name}",
                 f"Fahrlehrer: {teacher_name}",
                 f"Start: {appointment.start_at.strftime('%d.%m.%Y %H:%M')}",
                 f"Ende: {appointment.end_at.strftime('%d.%m.%Y %H:%M')}",
                 f"Dauer: {appointment.duration_min} Minuten",
-                "",
-                f"Anfrage: {request_text}",
             ]
+            + extra_lines
         )
     )
 
@@ -177,9 +186,16 @@ def book_appointment(
         db.rollback()
         return RedirectResponse(url="/portal", status_code=302)
 
+    db.refresh(appointment)
+    student_name = appointment.student.user.name if appointment.student and appointment.student.user else "Schüler"
+    start_fmt = appointment.start_at.strftime("%d.%m.%Y %H:%M")
+
     if requires_teacher_confirmation:
-        db.refresh(appointment)
-        send_request_notification_email(db, appointment)
+        notify_admins(db, "Neue Terminanfrage", f"{student_name} – {start_fmt}")
+        send_booking_notification_email(db, appointment, is_request=True)
+    else:
+        notify_admins(db, "Neuer Termin gebucht", f"{student_name} – {start_fmt}")
+        send_booking_notification_email(db, appointment, is_request=False)
 
     return RedirectResponse(url="/portal", status_code=302)
 
