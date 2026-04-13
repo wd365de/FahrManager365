@@ -22,7 +22,7 @@ from app.whatsapp import (
     notify_teacher_new_booking,
 )
 from app.settings import ALLOWED_APPOINTMENT_DURATIONS, BOOKING_BUFFER_MINUTES
-from app.settings import STUDENT_DIRECT_BOOKING_START_LEAD_HOURS, STUDENT_DIRECT_BOOKING_WINDOW_HOURS
+from app.settings import STUDENT_DIRECT_BOOKING_START_LEAD_HOURS
 from app.routes.utils import (
     get_authenticated_user,
     has_appointment_overlap,
@@ -172,13 +172,11 @@ def book_appointment(
     if start_dt < datetime.now():
         return RedirectResponse(url="/portal", status_code=302)
 
-    request_booking_until = datetime.now() + timedelta(
-        hours=STUDENT_DIRECT_BOOKING_START_LEAD_HOURS + STUDENT_DIRECT_BOOKING_WINDOW_HOURS
-    )
-    if start_dt > request_booking_until:
+    booking_until = datetime.now() + timedelta(hours=STUDENT_DIRECT_BOOKING_START_LEAD_HOURS)
+    if start_dt > booking_until:
         return RedirectResponse(url="/portal", status_code=302)
 
-    requires_teacher_confirmation = True  # Alle Buchungen müssen bestätigt werden
+    requires_teacher_confirmation = True  # Fahrlehrer muss jeden Termin bestätigen
 
     if datetime.now() < window.bookable_from:
         return RedirectResponse(url="/portal", status_code=302)

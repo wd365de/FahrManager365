@@ -290,7 +290,7 @@
                                     <input type="hidden" name="duration_min" value="{{ option.duration_min }}">
                                     <textarea class="form-control form-control-sm mb-2" name="request_message" rows="2" placeholder="Anfrage (optional)"></textarea>
                                     <button class="btn btn-sm btn-success w-100" type="submit" {% if not option.can_submit_now %}disabled{% endif %}>
-                                        {% if option.booking_mode == 'request' %}Anfragen{% else %}Buchen{% endif %}
+                                        Buchen
                                     </button>
                                 </form>
                             {% endfor %}
@@ -325,7 +325,7 @@
                                             <input type="hidden" name="duration_min" value="{{ option.duration_min }}">
                                             <textarea class="form-control form-control-sm mb-2" name="request_message" rows="2" placeholder="Anfrage (optional)"></textarea>
                                             <button class="btn btn-sm btn-success w-100" type="submit" {% if not option.can_submit_now %}disabled{% endif %}>
-                                                {% if option.booking_mode == 'request' %}Anfragen{% else %}Buchen{% endif %}
+                                                Buchen
                                             </button>
                                         </form>
                                     {% endfor %}

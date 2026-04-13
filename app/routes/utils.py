@@ -59,8 +59,7 @@ def build_booking_options(
     direct_booking_window_hours: int = 48,
 ) -> list[dict]:
     now = datetime.now()
-    direct_booking_until = now + timedelta(hours=direct_booking_start_lead_hours)
-    request_booking_until = direct_booking_until + timedelta(hours=direct_booking_window_hours)
+    booking_until = now + timedelta(hours=direct_booking_start_lead_hours)
     options: list[dict] = []
 
     for window in windows:
@@ -82,12 +81,9 @@ def build_booking_options(
                 if (
                     cursor >= now
                     and not has_overlap
-                    and cursor <= request_booking_until
+                    and cursor <= booking_until
                     and (can_book_now or include_locked_slots)
                 ):
-                    booking_mode = "book" if cursor <= direct_booking_until else "request"
-                    requires_teacher_confirmation = booking_mode == "request"
-                    can_submit_now = booking_mode in {"book", "request"}
                     options.append(
                         {
                             "window_id": window.id,
@@ -98,9 +94,8 @@ def build_booking_options(
                             "start_iso": cursor.isoformat(),
                             "bookable_from": window.bookable_from,
                             "can_book_now": can_book_now,
-                            "can_submit_now": can_submit_now,
-                            "booking_mode": booking_mode,
-                            "requires_teacher_confirmation": requires_teacher_confirmation,
+                            "can_submit_now": can_book_now,
+                            "booking_mode": "book",
                         }
                     )
                 cursor += timedelta(minutes=step_minutes)
