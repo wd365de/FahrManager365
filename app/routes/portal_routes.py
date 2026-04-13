@@ -153,6 +153,7 @@ def portal(request: Request, db: Session = Depends(get_db)):
     student_whatsapp_opted_in = user.student.whatsapp_opted_in
 
     booking_window_days = (STUDENT_DIRECT_BOOKING_START_LEAD_HOURS + STUDENT_DIRECT_BOOKING_WINDOW_HOURS) // 24
+    just_booked = request.query_params.get("booked") == "1"
 
     return templates.TemplateResponse(
         "portal.html",
@@ -182,6 +183,7 @@ def portal(request: Request, db: Session = Depends(get_db)):
             "student_whatsapp_opted_in": student_whatsapp_opted_in,
             "min_appointment_duration": min(ALLOWED_APPOINTMENT_DURATIONS),
             "booking_window_days": booking_window_days,
+            "just_booked": just_booked,
         },
     )
 

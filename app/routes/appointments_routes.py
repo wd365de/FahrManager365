@@ -237,7 +237,7 @@ def book_appointment(
         notify_user(db, teacher.user_id, "Neue Terminanfrage", f"{student_name} – {start_fmt}")
     send_booking_notification_email(db, appointment, is_request=True)
 
-    return RedirectResponse(url="/portal", status_code=302)
+    return RedirectResponse(url="/portal?booked=1", status_code=302)
 
 
 @router.post("/appointments/{appointment_id}/cancel")

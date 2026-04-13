@@ -1,5 +1,32 @@
 {% extends "base.html" %}
 {% block content %}
+{% if just_booked %}
+<div class="modal fade" id="bookingSuccessModal" tabindex="-1" aria-labelledby="bookingSuccessLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-success">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="bookingSuccessLabel">Buchung eingegangen ✓</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Schließen"></button>
+            </div>
+            <div class="modal-body">
+                Deine Terminanfrage wurde erfolgreich übermittelt. Du erhältst eine Bestätigung sobald dein Fahrlehrer zugesagt hat.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" data-bs-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var modal = new bootstrap.Modal(document.getElementById('bookingSuccessModal'));
+        modal.show();
+        if (history.replaceState) {
+            history.replaceState(null, '', '/portal');
+        }
+    });
+</script>
+{% endif %}
 <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-3">
     <div>
         <h1 class="h4 mb-1">Schülerportal</h1>
