@@ -46,7 +46,6 @@ def send_whatsapp(to_number: str, message: str) -> bool:
     account_sid, auth_token, from_number = config
     url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json"
 
-    print(f"WA send: to={to_number} from={from_number}", flush=True)
     try:
         resp = requests.post(
             url,
@@ -58,10 +57,8 @@ def send_whatsapp(to_number: str, message: str) -> bool:
             auth=(account_sid, auth_token),
             timeout=10,
         )
-        print(f"WA response: status={resp.status_code} body={resp.text[:200]}", flush=True)
         return resp.status_code in (200, 201)
-    except Exception as e:
-        print(f"WA exception: {e}", flush=True)
+    except Exception:
         return False
 
 

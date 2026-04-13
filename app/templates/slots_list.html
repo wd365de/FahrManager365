@@ -32,7 +32,41 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="h5 mb-0">Kalender</h2>
     <div class="d-flex gap-2">
+        <button class="btn btn-success btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#newSlotForm">+ Neuer Slot</button>
         <a class="btn btn-outline-secondary btn-sm" href="/slots?view={{ calendar_view_mode }}&day={{ today_iso }}">Heute</a>
+    </div>
+</div>
+<div class="collapse mb-3" id="newSlotForm">
+    <div class="card card-body">
+        <h6 class="mb-3">Neues Verfügbarkeitsfenster anlegen</h6>
+        <form method="post" action="/slots/new" class="row g-2">
+            <div class="col-md-3">
+                <label class="form-label form-label-sm mb-1">Fahrlehrer</label>
+                <select class="form-select form-select-sm" name="teacher_id" required>
+                    {% for t in teachers %}
+                        <option value="{{ t.id }}">{{ t.user.name if t.user else 'Fahrlehrer #' ~ t.id }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label form-label-sm mb-1">Beginn</label>
+                <input type="datetime-local" class="form-control form-control-sm" name="start_at" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label form-label-sm mb-1">Ende</label>
+                <input type="datetime-local" class="form-control form-control-sm" name="end_at" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label form-label-sm mb-1">Buchbar ab (Std. vorher)</label>
+                <input type="number" min="0" class="form-control form-control-sm" name="bookable_hours_before" value="999" required>
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+                <button class="btn btn-success btn-sm w-100" type="submit">Anlegen</button>
+            </div>
+        </form>
+        <div class="small text-muted mt-2">
+            <strong>Buchbar ab (Std. vorher):</strong> Wie viele Stunden vor dem Slot-Beginn Schüler buchen dürfen. 999 = sofort buchbar (empfohlen).
+        </div>
     </div>
 </div>
 {% if product_options %}

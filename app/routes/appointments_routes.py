@@ -154,44 +154,36 @@ def book_appointment(
         return redirect_to_login()
 
     if user.role != "student" or not user.student:
-        print("BOOK-DEBUG: no student role", flush=True)
         return RedirectResponse(url="/appointments", status_code=302)
 
     if duration_min not in ALLOWED_APPOINTMENT_DURATIONS:
-        print(f"BOOK-DEBUG: invalid duration {duration_min}", flush=True)
         return RedirectResponse(url="/portal", status_code=302)
 
     window = db.query(AvailabilityWindow).filter(AvailabilityWindow.id == window_id).first()
     if not window:
-        print(f"BOOK-DEBUG: window {window_id} not found", flush=True)
         return RedirectResponse(url="/portal", status_code=302)
 
     if not user.student.teacher_id or window.teacher_id != user.student.teacher_id:
-        print(f"BOOK-DEBUG: teacher mismatch student={user.student.teacher_id} window={window.teacher_id}", flush=True)
         return RedirectResponse(url="/portal", status_code=302)
 
     start_dt = parse_iso_datetime(start_at)
     end_dt = start_dt + timedelta(minutes=duration_min)
 
     if start_dt < datetime.now():
-        print(f"BOOK-DEBUG: start in past {start_dt}", flush=True)
         return RedirectResponse(url="/portal", status_code=302)
 
     request_booking_until = datetime.now() + timedelta(
         hours=STUDENT_DIRECT_BOOKING_START_LEAD_HOURS + STUDENT_DIRECT_BOOKING_WINDOW_HOURS
     )
     if start_dt > request_booking_until:
-        print(f"BOOK-DEBUG: start too far {start_dt} > {request_booking_until}", flush=True)
         return RedirectResponse(url="/portal", status_code=302)
 
     requires_teacher_confirmation = True  # Alle Buchungen müssen bestätigt werden
 
     if datetime.now() < window.bookable_from:
-        print(f"BOOK-DEBUG: not bookable yet {window.bookable_from}", flush=True)
         return RedirectResponse(url="/portal", status_code=302)
 
     if start_dt < window.start_at or end_dt > window.end_at:
-        print(f"BOOK-DEBUG: outside window {start_dt}-{end_dt} vs {window.start_at}-{window.end_at}", flush=True)
         return RedirectResponse(url="/portal", status_code=302)
 
     has_overlap = has_appointment_overlap(
@@ -202,7 +194,6 @@ def book_appointment(
         buffer_minutes=BOOKING_BUFFER_MINUTES,
     )
     if has_overlap:
-        print(f"BOOK-DEBUG: overlap for {start_dt}-{end_dt}", flush=True)
         return RedirectResponse(url="/portal", status_code=302)
 
     appointment = Appointment(
@@ -230,7 +221,6 @@ def book_appointment(
 
     # WhatsApp an Fahrlehrer mit Bestätigungs-/Ablehnungslink
     teacher = appointment.teacher
-    print(f"WA-DEBUG teacher={teacher} phone={getattr(teacher,'whatsapp_phone',None)} config={has_whatsapp_config()}", flush=True)
     if teacher and teacher.whatsapp_phone and has_whatsapp_config():
         confirm_url = f"{base_url}/appointments/{appointment.id}/wa-confirm/{_make_action_token(appointment.id, 'confirm')}"
         reject_url = f"{base_url}/appointments/{appointment.id}/wa-reject/{_make_action_token(appointment.id, 'reject')}"
@@ -238,7 +228,6 @@ def book_appointment(
 
     # WhatsApp an Schüler: Eingangsbestätigung
     student = appointment.student
-    print(f"WA-DEBUG student={student} opted_in={getattr(student,'whatsapp_opted_in',None)} phone={getattr(student,'whatsapp_phone',None)} config={has_whatsapp_config()}", flush=True)
     if student and student.whatsapp_opted_in and student.whatsapp_phone and has_whatsapp_config():
         notify_appointment_booked(student_name, student.whatsapp_phone, start_fmt)
 
