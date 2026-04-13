@@ -36,6 +36,7 @@ from app.settings import (
     PLANNER_SETTING_AUTO_REMINDERS,
     PLANNER_SETTING_DEFINITIONS,
     PLANNER_SETTING_SHOW_LOCKED_SLOTS,
+    SCHOOL_WHATSAPP_NUMBER,
 )
 from app.routes.utils import (
     get_authenticated_user,
@@ -551,6 +552,7 @@ def settings_page(request: Request, db: Session = Depends(get_db)):
     reminders_option = PLANNER_SETTING_DEFINITIONS.get(PLANNER_SETTING_AUTO_REMINDERS, {})
     show_locked_slots = get_planner_setting_bool(db, PLANNER_SETTING_SHOW_LOCKED_SLOTS)
     auto_reminders = get_planner_setting_bool(db, PLANNER_SETTING_AUTO_REMINDERS)
+    whatsapp_number = get_planner_setting_value(db, SCHOOL_WHATSAPP_NUMBER)
     return templates.TemplateResponse(
         "settings.html",
         {
@@ -568,6 +570,7 @@ def settings_page(request: Request, db: Session = Depends(get_db)):
             ),
             "show_locked_slots": show_locked_slots,
             "auto_reminders": auto_reminders,
+            "whatsapp_number": whatsapp_number,
         },
     )
 
@@ -577,6 +580,7 @@ def settings_update(
     request: Request,
     show_locked_slots: str | None = Form(None),
     auto_reminders: str | None = Form(None),
+    whatsapp_number: str = Form(""),
     db: Session = Depends(get_db),
 ):
     _, redirect = require_admin(request, db)
@@ -593,6 +597,8 @@ def settings_update(
         PLANNER_SETTING_AUTO_REMINDERS,
         "1" if auto_reminders == "on" else "0",
     )
+    cleaned_number = "".join(c for c in whatsapp_number if c.isdigit())
+    set_planner_setting_value(db, SCHOOL_WHATSAPP_NUMBER, cleaned_number)
     return RedirectResponse(url="/settings", status_code=302)
 
 

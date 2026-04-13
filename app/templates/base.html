@@ -71,6 +71,9 @@
                         <a class="sidebar-link{% if current_path.startswith('/master-data') %} active{% endif %}" href="/master-data">
                             <span class="sidebar-link-icon">🧩</span>Stammdatenfelder
                         </a>
+                        <a class="sidebar-link{% if current_path.startswith('/exams/organizations') %} active{% endif %}" href="/exams/organizations">
+                            <span class="sidebar-link-icon">🏢</span>Prüforganisationen
+                        </a>
                         <a class="sidebar-link{% if current_path.startswith('/settings') %} active{% endif %}" href="/settings">
                             <span class="sidebar-link-icon">⚙️</span>Einstellungen
                         </a>
@@ -91,9 +94,6 @@
                         </a>
                         <a class="sidebar-link{% if current_path.startswith('/exams/practical') %} active{% endif %}" href="/exams/practical">
                             <span class="sidebar-link-icon">🚗</span>Praxisprüfungen
-                        </a>
-                        <a class="sidebar-link{% if current_path.startswith('/exams/organizations') %} active{% endif %}" href="/exams/organizations">
-                            <span class="sidebar-link-icon">🏢</span>Prüforganisationen
                         </a>
                     </details>
                 {% elif user.role == "teacher" %}
@@ -152,6 +152,7 @@
             <a class="mobile-more-link d-block mb-2 px-3 py-2 rounded border text-decoration-none{% if current_path.startswith('/onboarding') %} active{% endif %}" href="/onboarding">Onboarding</a>
             <a class="mobile-more-link d-block mb-2 px-3 py-2 rounded border text-decoration-none{% if current_path.startswith('/teachers') %} active{% endif %}" href="/teachers">Fahrlehrer</a>
             <a class="mobile-more-link d-block mb-2 px-3 py-2 rounded border text-decoration-none{% if current_path.startswith('/master-data') %} active{% endif %}" href="/master-data">Stammdatenfelder</a>
+            <a class="mobile-more-link d-block mb-2 px-3 py-2 rounded border text-decoration-none{% if current_path.startswith('/exams/organizations') %} active{% endif %}" href="/exams/organizations">Prüforganisationen</a>
             <a class="mobile-more-link d-block mb-2 px-3 py-2 rounded border text-decoration-none{% if current_path.startswith('/settings') %} active{% endif %}" href="/settings">Einstellungen</a>
         </div>
 
@@ -164,7 +165,6 @@
             <div class="mobile-more-title">Prüfungen</div>
             <a class="mobile-more-link d-block mb-2 px-3 py-2 rounded border text-decoration-none{% if current_path.startswith('/exams/theory') %} active{% endif %}" href="/exams/theory">Theorieprüfungen</a>
             <a class="mobile-more-link d-block mb-2 px-3 py-2 rounded border text-decoration-none{% if current_path.startswith('/exams/practical') %} active{% endif %}" href="/exams/practical">Praxisprüfungen</a>
-            <a class="mobile-more-link d-block mb-2 px-3 py-2 rounded border text-decoration-none{% if current_path.startswith('/exams/organizations') %} active{% endif %}" href="/exams/organizations">Prüforganisationen</a>
         </div>
     </div>
 </div>

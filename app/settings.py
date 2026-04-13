@@ -9,6 +9,7 @@ STUDENT_DIRECT_BOOKING_WINDOW_HOURS = 72
 
 PLANNER_SETTING_SHOW_LOCKED_SLOTS = "planner.show_locked_slots"
 PLANNER_SETTING_AUTO_REMINDERS = "planner.auto_reminders"
+SCHOOL_WHATSAPP_NUMBER = "school.whatsapp_number"
 MASTER_DATA_APPOINTMENT_TYPES = "master_data.appointment_types"
 MASTER_DATA_CLASSES = "master_data.classes"
 MASTER_DATA_PRODUCTS = "master_data.products"
@@ -63,6 +64,11 @@ VIP-Service|Zusatzangebote
 VIP-Service B96|Zusatzangebote"""
 
 PLANNER_SETTING_DEFINITIONS = {
+    SCHOOL_WHATSAPP_NUMBER: {
+        "default": "",
+        "label": "WhatsApp-Nummer der Fahrschule",
+        "description": "Internationale Schreibweise ohne +, z. B. 4915123456789. Wird im Schülerportal als Kontakt-Button angezeigt.",
+    },
     PLANNER_SETTING_SHOW_LOCKED_SLOTS: {
         "default": "1",
         "label": "Slots vor Freigabe im Schülerportal anzeigen",

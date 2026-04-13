@@ -9,11 +9,12 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Appointment, AvailabilityWindow
 from app.readiness import calculate_student_readiness
-from app.planner_settings import get_planner_setting_bool
+from app.planner_settings import get_planner_setting_bool, get_planner_setting_value
 from app.push_notifications import has_push_config
 from app.settings import ALLOWED_APPOINTMENT_DURATIONS, BOOKING_BUFFER_MINUTES, BOOKING_STEP_MINUTES
 from app.settings import PLANNER_SETTING_AUTO_REMINDERS
 from app.settings import PLANNER_SETTING_SHOW_LOCKED_SLOTS
+from app.settings import SCHOOL_WHATSAPP_NUMBER
 from app.settings import STUDENT_DIRECT_BOOKING_START_LEAD_HOURS, STUDENT_DIRECT_BOOKING_WINDOW_HOURS
 from app.routes.utils import build_booking_options, get_authenticated_user, redirect_to_login
 
@@ -145,6 +146,7 @@ def portal(request: Request, db: Session = Depends(get_db)):
     assigned_teacher_name = user.student.teacher.user.name if user.student.teacher else None
     auto_reminders_enabled = get_planner_setting_bool(db, PLANNER_SETTING_AUTO_REMINDERS)
     push_mvp_available = auto_reminders_enabled and has_push_config()
+    whatsapp_number = get_planner_setting_value(db, SCHOOL_WHATSAPP_NUMBER)
 
     return templates.TemplateResponse(
         "portal.html",
@@ -168,5 +170,6 @@ def portal(request: Request, db: Session = Depends(get_db)):
             "assigned_teacher_name": assigned_teacher_name,
             "push_mvp_available": push_mvp_available,
             "auto_reminders_enabled": auto_reminders_enabled,
+            "whatsapp_number": whatsapp_number,
         },
     )

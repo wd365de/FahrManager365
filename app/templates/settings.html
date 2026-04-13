@@ -172,6 +172,33 @@
                     </details>
                 </div>
 
+                <div class="settings-option">
+                    <div class="settings-head">
+                        <div>
+                            <h2 class="settings-title">WhatsApp-Kontakt</h2>
+                            <p class="settings-meta">Direktkontakt für Schüler im Portal</p>
+                        </div>
+                    </div>
+                    <p class="settings-description">Wenn eine Nummer hinterlegt ist, sehen Schüler im Portal einen "WhatsApp schreiben"-Button, der direkt zur Fahrschule führt.</p>
+                    <div class="row g-2 align-items-center">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small mb-1" for="whatsapp-number">Telefonnummer (international, nur Ziffern)</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">+</span>
+                                <input class="form-control" type="text" id="whatsapp-number" name="whatsapp_number"
+                                       value="{{ whatsapp_number }}" placeholder="4915123456789"
+                                       inputmode="numeric" pattern="[0-9]*" maxlength="20">
+                            </div>
+                        </div>
+                        {% if whatsapp_number %}
+                            <div class="col-12 col-md-auto">
+                                <a href="https://wa.me/{{ whatsapp_number }}" target="_blank" rel="noopener"
+                                   class="btn btn-outline-success btn-sm">Vorschau testen</a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
                 <div class="mt-3">
                     <button class="btn btn-primary btn-sm" type="submit">Einstellungen speichern</button>
                 </div>
