@@ -223,6 +223,31 @@
                 <a class="btn btn-outline-secondary btn-sm" href="/portal?week_start={{ next_week_start }}{% if selected_duration %}&duration_min={{ selected_duration }}{% endif %}{% if selected_daypart %}&daypart={{ selected_daypart }}{% endif %}">Folgewoche →</a>
             </div>
 
+            {% if not all_booking_options %}
+                {% if assigned_teacher_name %}
+                    <div class="alert alert-info">
+                        Dein Fahrlehrer <strong>{{ assigned_teacher_name }}</strong> hat aktuell keine buchbaren Fahrstunden im nächsten {{ booking_window_days }}-Tage-Fenster eingestellt. Bitte schaue später wieder vorbei oder wende dich direkt an die Fahrschule.
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        Dir ist noch kein Fahrlehrer zugewiesen. Bitte wende dich an die Fahrschule.
+                    </div>
+                {% endif %}
+            {% elif not week_options %}
+                <div class="alert alert-info">
+                    In dieser Woche sind keine buchbaren Termine verfügbar.
+                    {% set has_next_options = namespace(found=false) %}
+                    {% for option in all_booking_options %}
+                        {% if option.start_at.date() >= week_days[6].date %}
+                            {% set has_next_options.found = true %}
+                        {% endif %}
+                    {% endfor %}
+                    {% if has_next_options.found %}
+                        <a href="/portal?week_start={{ next_week_start }}">In der Folgewoche gibt es Termine →</a>
+                    {% endif %}
+                </div>
+            {% endif %}
+
             <div class="d-lg-none mb-2">
                 {% for day in week_days %}
                     {% set options = options_by_day[day.date] %}

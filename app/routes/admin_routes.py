@@ -18,7 +18,7 @@ from app.planner_settings import (
     set_planner_setting_value,
 )
 from app.push_notifications import has_push_config
-from app.settings import DEFAULT_BOOKABLE_HOURS_BEFORE, WEEK_SLOT_DURATION_MINUTES
+from app.settings import ALLOWED_APPOINTMENT_DURATIONS, DEFAULT_BOOKABLE_HOURS_BEFORE, WEEK_SLOT_DURATION_MINUTES
 from app.settings import (
     MASTER_DATA_APPOINTMENT_TYPES,
     MASTER_DATA_CLASSES,
@@ -155,6 +155,11 @@ SLOTS_FEEDBACK_MESSAGES: dict[str, tuple[str, str]] = {
     "appointment_create_past": ("danger", "Vergangene Slots können nicht gebucht werden."),
     "appointment_create_overlap": ("danger", "Der Slot ist bereits belegt oder überschneidet sich mit einem Termin."),
     "appointment_create_duration": ("danger", "Ungültige Slot-Dauer. Bitte Slot prüfen."),
+    "slot_created": ("success", "Slot erfolgreich angelegt."),
+    "slot_create_past": ("danger", "Slot-Beginn liegt in der Vergangenheit."),
+    "slot_create_invalid": ("danger", "Ungültige Angaben: Beginn muss vor Ende liegen und beide müssen am gleichen Tag sein."),
+    "slot_create_too_short": ("warning", f"Slot angelegt, aber zu kurz für Buchungen (Mindestdauer: {min(ALLOWED_APPOINTMENT_DURATIONS)} Min). Bitte Endzeit anpassen."),
+    "slot_create_overlap": ("danger", "Dieser Zeitraum überschneidet sich mit einem bestehenden Slot des Fahrlehrers."),
 }
 
 
@@ -2078,6 +2083,7 @@ def slots_list(request: Request, db: Session = Depends(get_db)):
             "slot_duration_minutes": WEEK_SLOT_DURATION_MINUTES,
             "default_bookable_hours_before": DEFAULT_BOOKABLE_HOURS_BEFORE,
             "show_locked_slots": show_locked_slots,
+            "min_appointment_duration": min(ALLOWED_APPOINTMENT_DURATIONS),
         },
     )
 
@@ -2326,13 +2332,11 @@ def slots_create(
     start_dt = parse_datetime_local(start_at)
     end_dt = parse_datetime_local(end_at)
 
-    if (
-        start_dt >= end_dt
-        or start_dt < datetime.now()
-        or bookable_hours_before < 0
-        or start_dt.date() != end_dt.date()
-    ):
-        return RedirectResponse(url="/slots", status_code=302)
+    if start_dt < datetime.now():
+        return RedirectResponse(url="/slots?feedback=slot_create_past", status_code=302)
+
+    if start_dt >= end_dt or bookable_hours_before < 0 or start_dt.date() != end_dt.date():
+        return RedirectResponse(url="/slots?feedback=slot_create_invalid", status_code=302)
 
     existing = (
         db.query(AvailabilityWindow)
@@ -2344,7 +2348,7 @@ def slots_create(
         .first()
     )
     if existing:
-        return RedirectResponse(url="/slots", status_code=302)
+        return RedirectResponse(url="/slots?feedback=slot_create_overlap", status_code=302)
 
     window = AvailabilityWindow(
         teacher_id=teacher_id,
@@ -2355,7 +2359,12 @@ def slots_create(
     )
     db.add(window)
     db.commit()
-    return RedirectResponse(url="/slots", status_code=302)
+
+    slot_duration = int((end_dt - start_dt).total_seconds() // 60)
+    if slot_duration < min(ALLOWED_APPOINTMENT_DURATIONS):
+        return RedirectResponse(url=f"/slots?feedback=slot_create_too_short&day={start_dt.date().isoformat()}", status_code=302)
+
+    return RedirectResponse(url=f"/slots?feedback=slot_created&day={start_dt.date().isoformat()}", status_code=302)
 
 
 @router.post("/slots/week-create")
