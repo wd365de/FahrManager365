@@ -76,6 +76,8 @@ class Student(Base):
     payment_method = Column(String(50), nullable=True)
     cost_bearer = Column(String(50), nullable=True)
     notes = Column(Text, nullable=True)
+    whatsapp_phone = Column(String(50), nullable=True)
+    whatsapp_opted_in = Column(Boolean, nullable=False, default=False)
 
     user = relationship("User", back_populates="student")
     teacher = relationship("Teacher", back_populates="students")

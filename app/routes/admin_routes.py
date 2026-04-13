@@ -1238,6 +1238,8 @@ def students_create(
     price_list: str = Form(""),
     payment_method: str = Form(""),
     cost_bearer: str = Form(""),
+    whatsapp_phone: str = Form(""),
+    whatsapp_opted_in: str = Form(""),
     theory_status: str = Form("offen"),
     practical_status: str = Form("offen"),
     notes: str = Form(""),
@@ -1588,6 +1590,8 @@ def students_update(
     student.price_list = price_list.strip() or None
     student.payment_method = payment_method.strip() or None
     student.cost_bearer = cost_bearer.strip() or None
+    student.whatsapp_phone = "".join(c for c in whatsapp_phone if c.isdigit()) or None
+    student.whatsapp_opted_in = whatsapp_opted_in == "on"
     student.theory_status = theory_status
     student.practical_status = practical_status
     student.notes = notes

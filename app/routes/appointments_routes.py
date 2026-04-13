@@ -224,6 +224,12 @@ def confirm_appointment(appointment_id: int, request: Request, db: Session = Dep
     appointment.requires_teacher_confirmation = False
     appointment.is_read_by_student = False
     db.commit()
+
+    student = appointment.student
+    if student and student.whatsapp_opted_in and student.whatsapp_phone:
+        start_fmt = appointment.start_at.strftime("%d.%m.%Y um %H:%M Uhr")
+        notify_appointment_confirmed(student.user.name, student.whatsapp_phone, start_fmt)
+
     return RedirectResponse(url="/appointments", status_code=302)
 
 

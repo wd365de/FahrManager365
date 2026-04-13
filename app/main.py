@@ -297,6 +297,12 @@ def run_local_schema_migrations() -> None:
         if "cost_bearer" not in columns:
             with engine.begin() as connection:
                 connection.execute(text("ALTER TABLE students ADD COLUMN cost_bearer VARCHAR(50)"))
+        if "whatsapp_phone" not in columns:
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE students ADD COLUMN whatsapp_phone VARCHAR(50)"))
+        if "whatsapp_opted_in" not in columns:
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE students ADD COLUMN whatsapp_opted_in BOOLEAN NOT NULL DEFAULT 0"))
 
 
 @app.on_event("startup")
