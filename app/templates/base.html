@@ -15,7 +15,10 @@
         <a class="mobile-brand" href="/dashboard">
             <img src="/static/logo_fahrmanager360.png" alt="FahrManager 360" class="brand-logo-mobile">
         </a>
-        <a class="btn btn-sm btn-outline-dark" href="/logout">Logout</a>
+        <div class="d-flex align-items-center gap-2">
+            <span class="small text-muted">Hallo, {{ user.name.split(' ')[0] }}</span>
+            <a class="btn btn-sm btn-outline-dark" href="/logout">Logout</a>
+        </div>
     </div>
     <nav class="mobile-nav-main" aria-label="Mobile Hauptnavigation">
         <a class="mobile-nav-link mobile-nav-link-main{% if current_path == '/dashboard' %} active{% endif %}" href="/dashboard">Dashboard</a>
@@ -110,6 +113,7 @@
                 {% endif %}
             </nav>
             <div class="sidebar-footer">
+                <div class="sidebar-greeting">Hallo, {{ user.name.split(' ')[0] }} 👋</div>
                 <a class="btn btn-warning btn-sm w-100" href="/logout">Logout</a>
             </div>
         </div>

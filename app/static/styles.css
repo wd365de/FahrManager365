@@ -424,6 +424,13 @@ body {
     margin-top: auto;
 }
 
+.sidebar-greeting {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
 .app-content {
     flex: 1;
     min-width: 0;
