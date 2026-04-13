@@ -1,7 +1,7 @@
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -147,6 +147,8 @@ def portal(request: Request, db: Session = Depends(get_db)):
     auto_reminders_enabled = get_planner_setting_bool(db, PLANNER_SETTING_AUTO_REMINDERS)
     push_mvp_available = auto_reminders_enabled and has_push_config()
     whatsapp_number = get_planner_setting_value(db, SCHOOL_WHATSAPP_NUMBER)
+    student_whatsapp_phone = user.student.whatsapp_phone or ""
+    student_whatsapp_opted_in = user.student.whatsapp_opted_in
 
     return templates.TemplateResponse(
         "portal.html",
@@ -171,5 +173,25 @@ def portal(request: Request, db: Session = Depends(get_db)):
             "push_mvp_available": push_mvp_available,
             "auto_reminders_enabled": auto_reminders_enabled,
             "whatsapp_number": whatsapp_number,
+            "student_whatsapp_phone": student_whatsapp_phone,
+            "student_whatsapp_opted_in": student_whatsapp_opted_in,
         },
     )
+
+
+@router.post("/portal/whatsapp")
+def portal_whatsapp_update(
+    request: Request,
+    whatsapp_phone: str = Form(""),
+    whatsapp_opted_in: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    user = get_authenticated_user(request, db)
+    if not user or user.role != "student" or not user.student:
+        return redirect_to_login()
+
+    cleaned = "".join(c for c in whatsapp_phone if c.isdigit())
+    user.student.whatsapp_phone = cleaned or None
+    user.student.whatsapp_opted_in = whatsapp_opted_in == "on"
+    db.commit()
+    return RedirectResponse(url="/portal", status_code=302)
