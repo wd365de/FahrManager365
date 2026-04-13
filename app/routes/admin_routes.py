@@ -17,7 +17,9 @@ from app.planner_settings import (
     get_planner_setting_value,
     set_planner_setting_value,
 )
-from app.push_notifications import has_push_config
+from app.push_notifications import has_push_config, notify_admins, notify_user
+from app.whatsapp import has_whatsapp_config, notify_teacher_new_booking
+from app.routes.action_tokens import make_action_token
 from app.settings import ALLOWED_APPOINTMENT_DURATIONS, DEFAULT_BOOKABLE_HOURS_BEFORE, WEEK_SLOT_DURATION_MINUTES
 from app.settings import (
     MASTER_DATA_APPOINTMENT_TYPES,
@@ -2151,12 +2153,26 @@ def slots_create_appointment(
         end_at=window.end_at,
         duration_min=duration_min,
         status="booked",
-        requires_teacher_confirmation=False,
+        requires_teacher_confirmation=True,
         request_message=request_message.strip() or None,
         is_request_seen_by_admin=True,
     )
     db.add(appointment)
     db.commit()
+    db.refresh(appointment)
+
+    student_name = student.user.name if student.user else "Schüler"
+    start_fmt = appointment.start_at.strftime("%d.%m.%Y %H:%M")
+    base_url = str(request.base_url).rstrip("/")
+    teacher = appointment.teacher
+    if teacher and teacher.whatsapp_phone and has_whatsapp_config():
+        confirm_url = f"{base_url}/appointments/{appointment.id}/wa-confirm/{make_action_token(appointment.id, 'confirm')}"
+        reject_url = f"{base_url}/appointments/{appointment.id}/wa-reject/{make_action_token(appointment.id, 'reject')}"
+        notify_teacher_new_booking(teacher.whatsapp_phone, student_name, start_fmt, confirm_url, reject_url)
+    notify_admins(db, "Termin eingetragen", f"{student_name} – {start_fmt}")
+    if teacher:
+        notify_user(db, teacher.user_id, "Neuer Termin", f"{student_name} – {start_fmt}")
+
     return redirect_with_feedback("appointment_created")
 
 
