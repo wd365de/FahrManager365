@@ -13,7 +13,7 @@
 {% set current_path = request.url.path %}
 <header class="mobile-topbar d-lg-none">
     <div class="mobile-topbar-head">
-        <a class="mobile-brand" href="/dashboard">
+        <a class="mobile-brand" href="{% if user.role == 'student' %}/portal{% else %}/dashboard{% endif %}">
             <img src="/static/logo_fahrmanager360.png" alt="FahrManager 360" class="brand-logo-mobile">
         </a>
         <div class="d-flex align-items-center gap-2">
@@ -38,16 +38,24 @@
 <div class="app-shell">
     <aside class="app-sidebar">
         <div class="app-sidebar-rail">
-            <a class="rail-logo" href="/dashboard" id="rail-logo-link" title="Dashboard">FM</a>
+            {% if user.role == "student" %}
+                <a class="rail-logo" href="/portal" id="rail-logo-link" title="Portal">FM</a>
+            {% else %}
+                <a class="rail-logo" href="/dashboard" id="rail-logo-link" title="Dashboard">FM</a>
+            {% endif %}
             <div class="rail-links">
-                <a class="rail-link{% if current_path == '/dashboard' %} active{% endif %}" href="/dashboard" title="Dashboard">D</a>
-                {% if user.role == "admin" %}
+                {% if user.role == "student" %}
+                    <a class="rail-link{% if current_path.startswith('/portal') %} active{% endif %}" href="/portal" title="Mein Portal">🏠</a>
+                {% elif user.role == "teacher" %}
+                    <a class="rail-link{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments" title="Termine">🏠</a>
+                {% else %}
+                    <a class="rail-link{% if current_path == '/dashboard' %} active{% endif %}" href="/dashboard" title="Dashboard">D</a>
                     <a class="rail-link{% if current_path.startswith('/slots') %} active{% endif %}" href="/slots" title="Terminplaner">T</a>
                     <a class="rail-link{% if current_path.startswith('/students') %} active{% endif %}" href="/students" title="Schüler">S</a>
-                {% elif user.role == "student" %}
-                    <a class="rail-link{% if current_path.startswith('/portal') %} active{% endif %}" href="/portal" title="Portal">P</a>
                 {% endif %}
-                <a class="rail-link{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments" title="Termine">A</a>
+                {% if user.role != "student" %}
+                    <a class="rail-link{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments" title="Termine">A</a>
+                {% endif %}
             </div>
         </div>
 
@@ -131,17 +139,17 @@
 {% if user %}
     </main>
 </div>
-<nav class="mobile-bottom-nav d-lg-none{% if user.role == 'admin' %} count-4{% elif user.role == 'student' %} count-3{% else %} count-2{% endif %}" aria-label="Mobile Schnellnavigation">
-    <a class="mobile-bottom-link{% if current_path == '/dashboard' %} active{% endif %}" href="/dashboard"><span class="mobile-bottom-icon">🏠</span><span>Home</span></a>
-    {% if user.role == "admin" %}
+<nav class="mobile-bottom-nav d-lg-none{% if user.role == 'admin' %} count-4{% elif user.role == 'student' %} count-2{% else %} count-2{% endif %}" aria-label="Mobile Schnellnavigation">
+    {% if user.role == "student" %}
+        <a class="mobile-bottom-link{% if current_path.startswith('/portal') %} active{% endif %}" href="/portal"><span class="mobile-bottom-icon">🏠</span><span>Portal</span></a>
+        <a class="mobile-bottom-link{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments"><span class="mobile-bottom-icon">🗂️</span><span>Termine</span></a>
+    {% elif user.role == "teacher" %}
+        <a class="mobile-bottom-link{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments"><span class="mobile-bottom-icon">🏠</span><span>Termine</span></a>
+    {% else %}
+        <a class="mobile-bottom-link{% if current_path == '/dashboard' %} active{% endif %}" href="/dashboard"><span class="mobile-bottom-icon">🏠</span><span>Home</span></a>
         <a class="mobile-bottom-link{% if current_path.startswith('/slots') %} active{% endif %}" href="/slots"><span class="mobile-bottom-icon">📅</span><span>Planen</span></a>
         <a class="mobile-bottom-link{% if current_path.startswith('/exams') %} active{% endif %}" href="/exams/theory"><span class="mobile-bottom-icon">🧪</span><span>Prüfung</span></a>
         <button type="button" class="mobile-bottom-link mobile-bottom-button{% if not (current_path == '/dashboard' or current_path.startswith('/slots') or current_path.startswith('/exams')) %} active{% endif %}" data-bs-toggle="offcanvas" data-bs-target="#mobileMoreNav" aria-controls="mobileMoreNav"><span class="mobile-bottom-icon">☰</span><span>Mehr</span></button>
-    {% elif user.role == "student" %}
-        <a class="mobile-bottom-link{% if current_path.startswith('/portal') %} active{% endif %}" href="/portal"><span class="mobile-bottom-icon">📘</span><span>Portal</span></a>
-        <a class="mobile-bottom-link{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments"><span class="mobile-bottom-icon">🗂️</span><span>Termine</span></a>
-    {% elif user.role == "teacher" %}
-        <a class="mobile-bottom-link{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments"><span class="mobile-bottom-icon">🗂️</span><span>Termine</span></a>
     {% endif %}
 </nav>
 {% if user.role == "admin" %}
