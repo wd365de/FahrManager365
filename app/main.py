@@ -304,6 +304,12 @@ def run_local_schema_migrations() -> None:
             with engine.begin() as connection:
                 connection.execute(text("ALTER TABLE students ADD COLUMN whatsapp_opted_in BOOLEAN NOT NULL DEFAULT FALSE"))
 
+    if inspector.has_table("teachers"):
+        columns = {column["name"] for column in inspector.get_columns("teachers")}
+        if "whatsapp_phone" not in columns:
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE teachers ADD COLUMN whatsapp_phone VARCHAR(50)"))
+
     # Replace uq_teacher_appointment with a partial unique index (booked only),
     # so cancelled slots can be re-booked without a DB constraint violation.
     if inspector.has_table("appointments"):

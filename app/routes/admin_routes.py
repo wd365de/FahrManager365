@@ -17,6 +17,7 @@ from app.planner_settings import (
     get_planner_setting_value,
     set_planner_setting_value,
 )
+from app.push_notifications import has_push_config
 from app.settings import DEFAULT_BOOKABLE_HOURS_BEFORE, WEEK_SLOT_DURATION_MINUTES
 from app.settings import (
     MASTER_DATA_APPOINTMENT_TYPES,
@@ -710,6 +711,9 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
         .count()
     )
 
+    auto_reminders_enabled = get_planner_setting_bool(db, PLANNER_SETTING_AUTO_REMINDERS)
+    push_mvp_available = auto_reminders_enabled and has_push_config()
+
     return templates.TemplateResponse(
         "dashboard.html",
         {
@@ -729,6 +733,7 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
             "teacher_labels": teacher_labels,
             "teacher_load_values": teacher_load_values,
             "urgent_students": urgent_students,
+            "push_mvp_available": push_mvp_available,
         },
     )
 
@@ -1635,6 +1640,7 @@ def teachers_create(
     name: str = Form(...),
     email: str = Form(...),
     password: str = Form(...),
+    whatsapp_phone: str = Form(""),
     db: Session = Depends(get_db),
 ):
     _, redirect = require_admin(request, db)
@@ -1653,9 +1659,29 @@ def teachers_create(
     db.add(user)
     db.flush()
 
-    teacher = Teacher(user_id=user.id)
+    cleaned = "".join(c for c in whatsapp_phone if c.isdigit())
+    teacher = Teacher(user_id=user.id, whatsapp_phone=cleaned or None)
     db.add(teacher)
     db.commit()
+    return RedirectResponse(url="/teachers", status_code=302)
+
+
+@router.post("/teachers/{teacher_id}/whatsapp")
+def teacher_whatsapp_update(
+    teacher_id: int,
+    request: Request,
+    whatsapp_phone: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    _, redirect = require_admin(request, db)
+    if redirect:
+        return redirect
+
+    teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
+    if teacher:
+        cleaned = "".join(c for c in whatsapp_phone if c.isdigit())
+        teacher.whatsapp_phone = cleaned or None
+        db.commit()
     return RedirectResponse(url="/teachers", status_code=302)
 
 

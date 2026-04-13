@@ -89,6 +89,7 @@ class Teacher(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    whatsapp_phone = Column(String(50), nullable=True)
 
     user = relationship("User", back_populates="teacher")
     students = relationship("Student", back_populates="teacher")

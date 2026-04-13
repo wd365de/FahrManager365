@@ -3,17 +3,24 @@
 <h1 class="h4 mb-3">Fahrlehrer</h1>
 <form method="post" action="/teachers/new" class="card card-body mb-4">
     <div class="row g-3 align-items-end">
-        <div class="col-md-4">
+        <div class="col-md-3">
             <label class="form-label">Name</label>
             <input class="form-control" name="name" required>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <label class="form-label">E-Mail</label>
             <input class="form-control" type="email" name="email" required>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
             <label class="form-label">Passwort</label>
             <input class="form-control" type="password" name="password" required>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">WhatsApp-Nummer</label>
+            <div class="input-group">
+                <span class="input-group-text">+</span>
+                <input class="form-control" type="text" name="whatsapp_phone" placeholder="4915112345678" inputmode="numeric">
+            </div>
         </div>
         <div class="col-md-1">
             <button class="btn btn-primary w-100" type="submit">+</button>
@@ -21,12 +28,33 @@
     </div>
 </form>
 <table class="table table-striped table-bordered">
-    <thead><tr><th>Name</th><th>E-Mail</th></tr></thead>
+    <thead><tr><th>Name</th><th>E-Mail</th><th>WhatsApp</th><th></th></tr></thead>
     <tbody>
     {% for teacher in teachers %}
-        <tr><td>{{ teacher.user.name }}</td><td>{{ teacher.user.email }}</td></tr>
+        <tr>
+            <td>{{ teacher.user.name }}</td>
+            <td>{{ teacher.user.email }}</td>
+            <td>
+                <form method="post" action="/teachers/{{ teacher.id }}/whatsapp" class="d-flex gap-2 align-items-center">
+                    <div class="input-group input-group-sm" style="max-width:200px">
+                        <span class="input-group-text">+</span>
+                        <input class="form-control form-control-sm" type="text" name="whatsapp_phone"
+                               value="{{ teacher.whatsapp_phone or '' }}" placeholder="4915112345678"
+                               inputmode="numeric">
+                    </div>
+                    <button class="btn btn-sm btn-outline-secondary" type="submit">Speichern</button>
+                </form>
+            </td>
+            <td>
+                {% if teacher.whatsapp_phone %}
+                    <span class="badge text-bg-success">WA aktiv</span>
+                {% else %}
+                    <span class="badge text-bg-secondary">WA inaktiv</span>
+                {% endif %}
+            </td>
+        </tr>
     {% else %}
-        <tr><td colspan="2">Keine Fahrlehrer vorhanden.</td></tr>
+        <tr><td colspan="4">Keine Fahrlehrer vorhanden.</td></tr>
     {% endfor %}
     </tbody>
 </table>

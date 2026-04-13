@@ -71,3 +71,20 @@ def notify_appointment_booked(student_name: str, to_number: str, start_at: str) 
         f"Deine Fahrschule"
     )
     return send_whatsapp(to_number, message)
+
+
+def notify_teacher_new_booking(
+    to_number: str,
+    student_name: str,
+    start_at: str,
+    confirm_url: str,
+    reject_url: str,
+) -> bool:
+    message = (
+        f"Neue Terminanfrage\n\n"
+        f"Schüler: {student_name}\n"
+        f"Termin: {start_at}\n\n"
+        f"Bestätigen:\n{confirm_url}\n\n"
+        f"Ablehnen:\n{reject_url}"
+    )
+    return send_whatsapp(to_number, message)
