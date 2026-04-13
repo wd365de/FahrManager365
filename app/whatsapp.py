@@ -1,5 +1,8 @@
+import logging
 import os
 import requests
+
+logger = logging.getLogger(__name__)
 
 
 def _get_config() -> tuple[str, str, str] | None:
@@ -43,6 +46,7 @@ def send_whatsapp(to_number: str, message: str) -> bool:
     account_sid, auth_token, from_number = config
     url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json"
 
+    logger.info("WA send: to=%s from=%s", to_number, from_number)
     try:
         resp = requests.post(
             url,
@@ -54,8 +58,10 @@ def send_whatsapp(to_number: str, message: str) -> bool:
             auth=(account_sid, auth_token),
             timeout=10,
         )
+        logger.info("WA response: status=%s body=%s", resp.status_code, resp.text[:200])
         return resp.status_code in (200, 201)
-    except Exception:
+    except Exception as e:
+        logger.error("WA exception: %s", e)
         return False
 
 
