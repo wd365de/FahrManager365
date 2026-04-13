@@ -360,8 +360,13 @@ def wa_confirm_appointment(appointment_id: int, token: str, db: Session = Depend
     appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
     if not appointment:
         return HTMLResponse(_WA_PAGE.format(icon="⚠️", title="Nicht gefunden", body="Termin nicht gefunden."), status_code=404)
-    if appointment.status != "booked" or not appointment.requires_teacher_confirmation:
-        return HTMLResponse(_WA_PAGE.format(icon="ℹ️", title="Bereits bearbeitet", body="Dieser Termin wurde bereits bestätigt oder abgesagt."))
+    if appointment.status == "cancelled":
+        return HTMLResponse(_WA_PAGE.format(icon="ℹ️", title="Termin storniert", body="Dieser Termin wurde bereits storniert."))
+    if not appointment.requires_teacher_confirmation:
+        start_fmt = appointment.start_at.strftime("%d.%m.%Y um %H:%M Uhr")
+        return HTMLResponse(_WA_PAGE.format(icon="✅", title="Bereits bestätigt", body=f"Der Termin am {start_fmt} wurde bereits bestätigt."))
+    if appointment.status != "booked":
+        return HTMLResponse(_WA_PAGE.format(icon="ℹ️", title="Bereits bearbeitet", body="Dieser Termin wurde bereits abgesagt."))
 
     appointment.requires_teacher_confirmation = False
     appointment.is_request_seen_by_admin = True
@@ -386,8 +391,10 @@ def wa_reject_appointment(appointment_id: int, token: str, db: Session = Depends
     appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
     if not appointment:
         return HTMLResponse(_WA_PAGE.format(icon="⚠️", title="Nicht gefunden", body="Termin nicht gefunden."), status_code=404)
+    if appointment.status == "cancelled":
+        return HTMLResponse(_WA_PAGE.format(icon="ℹ️", title="Bereits storniert", body="Dieser Termin wurde bereits storniert."))
     if appointment.status != "booked":
-        return HTMLResponse(_WA_PAGE.format(icon="ℹ️", title="Bereits bearbeitet", body="Dieser Termin wurde bereits bestätigt oder abgesagt."))
+        return HTMLResponse(_WA_PAGE.format(icon="ℹ️", title="Bereits bearbeitet", body="Dieser Termin wurde bereits abgeschlossen."))
 
     appointment.status = "cancelled"
     appointment.requires_teacher_confirmation = False
