@@ -21,6 +21,8 @@ def login_page(request: Request, db: Session = Depends(get_db)):
     if current_user:
         if current_user.role == "student":
             return RedirectResponse(url="/portal", status_code=302)
+        if current_user.role == "teacher":
+            return RedirectResponse(url="/appointments", status_code=302)
         return RedirectResponse(url="/dashboard", status_code=302)
     return templates.TemplateResponse("login.html", {"request": request, "error": None})
 
@@ -43,6 +45,8 @@ def login_submit(
     login_user(request, user)
     if user.role == "student":
         return RedirectResponse(url="/portal", status_code=302)
+    if user.role == "teacher":
+        return RedirectResponse(url="/appointments", status_code=302)
     return RedirectResponse(url="/dashboard", status_code=302)
 
 

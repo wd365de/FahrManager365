@@ -35,6 +35,8 @@ def portal(request: Request, db: Session = Depends(get_db)):
     if not user:
         return redirect_to_login()
 
+    if user.role == "teacher":
+        return RedirectResponse(url="/appointments", status_code=302)
     if user.role != "student" or not user.student:
         return RedirectResponse(url="/dashboard", status_code=302)
 

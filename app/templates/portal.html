@@ -427,7 +427,7 @@
             setStatus('Test-Push gesendet (' + result.sent + '/' + result.total + ').', false);
         }
 
-        // Beim Laden: Subscription-Status prüfen und Buttons entsprechend setzen
+        // Beim Laden: Subscription-Status prüfen und mit Server synchronisieren
         updateButtons(false); // Standardzustand: nicht abonniert
         if (!autoRemindersEnabled) {
             setStatus('Hinweis: In den Einstellungen ist "Automatische Terminerinnerungen" aktuell deaktiviert.', true);
@@ -441,6 +441,13 @@
             setStatus('Lade Subscription-Status…', false);
             getCurrentSubscription().then(function (subscription) {
                 if (subscription) {
+                    // Browser-Subscription mit Server synchronisieren (z.B. nach DB-Reset)
+                    fetch('/api/push/subscribe', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'same-origin',
+                        body: JSON.stringify(subscription),
+                    }).catch(function () { /* silent – UI bleibt aktiv */ });
                     updateButtons(true);
                     setStatus('Push ist aktiv. Du kannst einen Test senden oder Push deaktivieren.', false);
                 } else {

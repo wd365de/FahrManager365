@@ -55,7 +55,8 @@ def require_admin(request: Request, db: Session):
     if not user:
         return None, redirect_to_login()
     if not require_role(user, "admin"):
-        return None, RedirectResponse(url="/portal", status_code=302)
+        target = "/appointments" if user.role == "teacher" else "/portal"
+        return None, RedirectResponse(url=target, status_code=302)
     return user, None
 
 

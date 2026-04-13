@@ -406,7 +406,13 @@
         setStatus('VAPID-Keys fehlen – Push nicht verfügbar.', true);
         enableBtn.disabled = true; testBtn.disabled = true;
     } else {
-        getSub().then(function(sub) { updateButtons(!!sub); setStatus(sub ? 'Push ist aktiv.' : '', false); });
+        getSub().then(function(sub) {
+            if (sub) {
+                // Browser-Subscription mit Server synchronisieren (z.B. nach DB-Reset)
+                fetch('/api/push/subscribe', {method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin', body:JSON.stringify(sub)}).catch(function(){});
+            }
+            updateButtons(!!sub); setStatus(sub ? 'Push ist aktiv.' : '', false);
+        });
     }
     updateButtons(false);
 })();
