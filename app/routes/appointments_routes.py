@@ -221,6 +221,7 @@ def book_appointment(
 
     # WhatsApp an Fahrlehrer mit Bestätigungs-/Ablehnungslink
     teacher = appointment.teacher
+    print(f"WA-DEBUG teacher={teacher} phone={getattr(teacher,'whatsapp_phone',None)} config={has_whatsapp_config()}", flush=True)
     if teacher and teacher.whatsapp_phone and has_whatsapp_config():
         confirm_url = f"{base_url}/appointments/{appointment.id}/wa-confirm/{_make_action_token(appointment.id, 'confirm')}"
         reject_url = f"{base_url}/appointments/{appointment.id}/wa-reject/{_make_action_token(appointment.id, 'reject')}"
@@ -228,6 +229,7 @@ def book_appointment(
 
     # WhatsApp an Schüler: Eingangsbestätigung
     student = appointment.student
+    print(f"WA-DEBUG student={student} opted_in={getattr(student,'whatsapp_opted_in',None)} phone={getattr(student,'whatsapp_phone',None)} config={has_whatsapp_config()}", flush=True)
     if student and student.whatsapp_opted_in and student.whatsapp_phone and has_whatsapp_config():
         notify_appointment_booked(student_name, student.whatsapp_phone, start_fmt)
 
