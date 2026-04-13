@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Appointment, AvailabilityWindow, User
-from app.push_notifications import notify_admins
+from app.push_notifications import has_push_config, notify_admins
 from app.whatsapp import (
     has_whatsapp_config,
     notify_appointment_booked,
@@ -136,7 +136,7 @@ def appointments_list(request: Request, db: Session = Depends(get_db)):
     appointments = query.all()
     return templates.TemplateResponse(
         "appointments_list.html",
-        {"request": request, "user": user, "appointments": appointments},
+        {"request": request, "user": user, "appointments": appointments, "push_mvp_available": has_push_config()},
     )
 
 
