@@ -22,7 +22,8 @@
             </div>
             <div class="col-12">
                 <label class="form-label">E-Mail</label>
-                <input class="form-control" type="email" value="{{ user.email }}" disabled>
+                <input class="form-control" type="email" name="email"
+                       value="{{ user.email }}">
             </div>
             <div class="col-md-6">
                 <label class="form-label">Handynummer</label>
@@ -38,6 +39,34 @@
                            inputmode="numeric" pattern="[0-9]*" maxlength="20">
                 </div>
                 <div class="form-text">International ohne +, nur Ziffern.</div>
+            </div>
+        </div>
+    </div>
+
+    {# ── Adresse ── #}
+    <div class="card card-body">
+        <h2 class="h6 fw-bold mb-3">🏠 Adresse</h2>
+        <div class="row g-3">
+            <div class="col-md-8">
+                <label class="form-label">Straße</label>
+                <input class="form-control" type="text" name="street"
+                       value="{{ student.street or '' }}" placeholder="Musterstraße">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Hausnummer</label>
+                <input class="form-control" type="text" name="house_number"
+                       value="{{ student.house_number or '' }}" placeholder="12a">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">PLZ</label>
+                <input class="form-control" type="text" name="postal_code"
+                       value="{{ student.postal_code or '' }}" placeholder="12345"
+                       inputmode="numeric" maxlength="10">
+            </div>
+            <div class="col-md-8">
+                <label class="form-label">Ort</label>
+                <input class="form-control" type="text" name="city"
+                       value="{{ student.city or '' }}" placeholder="Musterstadt">
             </div>
         </div>
     </div>

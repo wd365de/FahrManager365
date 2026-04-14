@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="h4 mb-3">Mein Kalender</h1>
+
+{% if feedback_message %}
+<div class="alert alert-{{ feedback_level }} alert-dismissible fade show" role="alert">
+    {{ feedback_message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if pending_confirmations %}
+<div class="alert alert-warning" role="alert">
+    <strong>Offene Anfragen ({{ pending_confirmations|length }}):</strong>
+    <ul class="mb-0 mt-1">
+        {% for appt in pending_confirmations[:5] %}
+        <li>
+            {{ appt.start_at.strftime('%d.%m.%Y %H:%M') }} –
+            {{ appt.student.user.name if appt.student and appt.student.user else 'Unbekannt' }}
+            {% if appt.request_message %} — {{ appt.request_message }}{% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    <a class="btn btn-sm btn-warning mt-2" href="/appointments">Zu den Anfragen</a>
+</div>
+{% endif %}
+
+{# New slot form #}
+<div class="card card-body mb-3">
+    <h2 class="h6 fw-bold mb-2">Neuen Slot anlegen</h2>
+    <form method="post" action="/teacher/planner/slots/new" class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label form-label-sm mb-1">Beginn</label>
+            <input type="datetime-local" class="form-control form-control-sm" name="start_at" required>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label form-label-sm mb-1">Ende</label>
+            <input type="datetime-local" class="form-control form-control-sm" name="end_at" required>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-success btn-sm w-100" type="submit">Anlegen</button>
+        </div>
+    </form>
+    <div class="form-text mt-1">Slots müssen am gleichen Tag liegen und dürfen sich nicht überschneiden.</div>
+</div>
+
+{# Week navigation #}
+<div class="card card-body mb-3">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary btn-sm" href="/teacher/planner?week_start={{ prev_week_start }}">← Zurück</a>
+            <a class="btn btn-outline-secondary btn-sm" href="/teacher/planner?week_start={{ next_week_start }}">Weiter →</a>
+        </div>
+        <strong>{{ week_days[0].label }} – {{ week_days[6].label }}</strong>
+        {% if week_start != current_week_start %}
+        <a class="btn btn-outline-primary btn-sm" href="/teacher/planner?week_start={{ current_week_start }}">Heute</a>
+        {% else %}
+        <span class="btn btn-primary btn-sm disabled">Heute</span>
+        {% endif %}
+    </div>
+
+    <div class="row g-2 mt-2">
+        {% for day_info in week_days %}
+        {% set day = day_info.date %}
+        {% set slots = windows_by_day.get(day, []) %}
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="border rounded p-2 h-100{% if day.isoformat() == today_iso %} border-primary bg-primary bg-opacity-10{% endif %}">
+                <div class="fw-semibold small mb-2 d-flex justify-content-between align-items-center">
+                    <span>{{ day_info.label }}</span>
+                    {% if day.isoformat() == today_iso %}<span class="badge bg-primary">Heute</span>{% endif %}
+                </div>
+                {% if slots %}
+                    {% for slot in slots %}
+                    {% set booking = appointments_by_window.get(slot.id) %}
+                    <div class="mb-2 p-2 rounded border {% if booking %}border-success bg-success bg-opacity-10{% else %}border-secondary bg-light{% endif %}">
+                        <div class="d-flex justify-content-between align-items-start gap-1">
+                            <div>
+                                <div class="fw-semibold small">
+                                    {{ slot.start_at.strftime('%H:%M') }} – {{ slot.end_at.strftime('%H:%M') }}
+                                </div>
+                                {% if booking %}
+                                <div class="small text-success">
+                                    🟢 {{ booking.student.user.name if booking.student and booking.student.user else 'Unbekannt' }}
+                                    {% if booking.duration_min %} · {{ booking.duration_min }} Min{% endif %}
+                                    {% if booking.requires_teacher_confirmation %}
+                                    <span class="badge bg-warning text-dark ms-1">Anfrage</span>
+                                    {% endif %}
+                                </div>
+                                {% else %}
+                                <div class="small text-muted">Frei</div>
+                                {% endif %}
+                            </div>
+                            {% if not booking %}
+                            <form method="post" action="/teacher/planner/slots/{{ slot.id }}/delete"
+                                  onsubmit="return confirm('Slot löschen?')">
+                                <input type="hidden" name="week_start" value="{{ week_start }}">
+                                <button class="btn btn-outline-danger btn-sm py-0 px-1" type="submit" title="Löschen">✕</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="text-muted small">Keine Slots</div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}

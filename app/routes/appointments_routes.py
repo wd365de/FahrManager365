@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 import os
 from pathlib import Path
 import smtplib
@@ -9,10 +9,10 @@ from sqlalchemy.exc import IntegrityError
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from app.routes.action_tokens import make_action_token, verify_action_token
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
-from app.models import Appointment, AvailabilityWindow, User
+from app.models import Appointment, AvailabilityWindow, Student, Teacher, User
 from app.push_notifications import has_push_config, notify_admins, notify_user
 from app.whatsapp import (
     has_whatsapp_config,
@@ -136,6 +136,206 @@ def teacher_settings_save(
     user.teacher.whatsapp_phone = cleaned or None
     db.commit()
     return RedirectResponse(url="/teacher/settings?saved=1", status_code=302)
+
+
+@router.get("/teacher/planner")
+def teacher_planner(request: Request, db: Session = Depends(get_db)):
+    user = get_authenticated_user(request, db)
+    if not user or user.role != "teacher" or not user.teacher:
+        return redirect_to_login()
+
+    teacher = user.teacher
+    today = date.today()
+
+    week_start_param = request.query_params.get("week_start")
+    try:
+        week_start = date.fromisoformat(week_start_param) if week_start_param else today - timedelta(days=today.weekday())
+    except ValueError:
+        week_start = today - timedelta(days=today.weekday())
+
+    week_end = week_start + timedelta(days=7)
+    current_week_start = (today - timedelta(days=today.weekday())).isoformat()
+
+    weekday_labels = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+    week_dates = [week_start + timedelta(days=i) for i in range(7)]
+    week_days = [
+        {"date": d, "label": f"{weekday_labels[i]} {d.strftime('%d.%m')}"}
+        for i, d in enumerate(week_dates)
+    ]
+
+    windows = (
+        db.query(AvailabilityWindow)
+        .filter(
+            AvailabilityWindow.teacher_id == teacher.id,
+            AvailabilityWindow.start_at >= datetime.combine(week_start, datetime.min.time()),
+            AvailabilityWindow.start_at < datetime.combine(week_end, datetime.min.time()),
+        )
+        .order_by(AvailabilityWindow.start_at.asc())
+        .all()
+    )
+
+    appointments = (
+        db.query(Appointment)
+        .options(joinedload(Appointment.student).joinedload(Student.user))
+        .filter(
+            Appointment.teacher_id == teacher.id,
+            Appointment.status == "booked",
+            Appointment.start_at >= datetime.combine(week_start, datetime.min.time()),
+            Appointment.start_at < datetime.combine(week_end, datetime.min.time()),
+        )
+        .order_by(Appointment.start_at.asc())
+        .all()
+    )
+
+    windows_by_day = {d: [] for d in week_dates}
+    for w in windows:
+        day_key = w.start_at.date()
+        if day_key in windows_by_day:
+            windows_by_day[day_key].append(w)
+
+    appointments_by_window = {}
+    for appt in appointments:
+        for w in windows:
+            if appt.start_at < w.end_at and appt.end_at > w.start_at:
+                appointments_by_window[w.id] = appt
+                break
+
+    pending_confirmations = (
+        db.query(Appointment)
+        .options(joinedload(Appointment.student).joinedload(Student.user))
+        .filter(
+            Appointment.teacher_id == teacher.id,
+            Appointment.status == "booked",
+            Appointment.requires_teacher_confirmation == True,
+            Appointment.is_closed == False,
+        )
+        .order_by(Appointment.start_at.asc())
+        .all()
+    )
+
+    feedback = request.query_params.get("feedback", "")
+    feedback_messages = {
+        "created": ("success", "Slot wurde angelegt."),
+        "deleted": ("success", "Slot wurde gelöscht."),
+        "overlap": ("warning", "Slot überschneidet sich mit einem vorhandenen Slot."),
+        "invalid": ("danger", "Ungültige Zeiten. Start muss vor Ende liegen, gleicher Tag."),
+        "past": ("warning", "Slot kann nicht in der Vergangenheit angelegt werden."),
+        "has_booking": ("warning", "Slot hat eine Buchung und kann nicht gelöscht werden."),
+    }
+    feedback_level, feedback_message = feedback_messages.get(feedback, ("", ""))
+
+    return templates.TemplateResponse(
+        "teacher_planner.html",
+        {
+            "request": request,
+            "user": user,
+            "teacher": teacher,
+            "week_days": week_days,
+            "week_start": week_start.isoformat(),
+            "prev_week_start": (week_start - timedelta(days=7)).isoformat(),
+            "next_week_start": (week_start + timedelta(days=7)).isoformat(),
+            "current_week_start": current_week_start,
+            "today_iso": today.isoformat(),
+            "windows_by_day": windows_by_day,
+            "appointments_by_window": appointments_by_window,
+            "pending_confirmations": pending_confirmations,
+            "feedback_level": feedback_level,
+            "feedback_message": feedback_message,
+            "now": datetime.now(),
+        },
+    )
+
+
+@router.post("/teacher/planner/slots/new")
+def teacher_planner_slot_create(
+    request: Request,
+    start_at: str = Form(...),
+    end_at: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    user = get_authenticated_user(request, db)
+    if not user or user.role != "teacher" or not user.teacher:
+        return redirect_to_login()
+
+    teacher = user.teacher
+    try:
+        start_dt = datetime.fromisoformat(start_at)
+        end_dt = datetime.fromisoformat(end_at)
+    except ValueError:
+        return RedirectResponse(url="/teacher/planner?feedback=invalid", status_code=302)
+
+    if start_dt < datetime.now():
+        return RedirectResponse(url="/teacher/planner?feedback=past", status_code=302)
+
+    if start_dt >= end_dt or start_dt.date() != end_dt.date():
+        return RedirectResponse(url="/teacher/planner?feedback=invalid", status_code=302)
+
+    existing = (
+        db.query(AvailabilityWindow)
+        .filter(
+            AvailabilityWindow.teacher_id == teacher.id,
+            AvailabilityWindow.start_at < end_dt,
+            AvailabilityWindow.end_at > start_dt,
+        )
+        .first()
+    )
+    if existing:
+        return RedirectResponse(url="/teacher/planner?feedback=overlap", status_code=302)
+
+    window = AvailabilityWindow(
+        teacher_id=teacher.id,
+        start_at=start_dt,
+        end_at=end_dt,
+        bookable_from=start_dt - timedelta(hours=999),
+        source="manual",
+    )
+    db.add(window)
+    db.commit()
+    return RedirectResponse(
+        url=f"/teacher/planner?week_start={start_dt.date() - timedelta(days=start_dt.date().weekday())}&feedback=created",
+        status_code=302,
+    )
+
+
+@router.post("/teacher/planner/slots/{slot_id}/delete")
+def teacher_planner_slot_delete(
+    slot_id: int,
+    request: Request,
+    week_start: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    user = get_authenticated_user(request, db)
+    if not user or user.role != "teacher" or not user.teacher:
+        return redirect_to_login()
+
+    window = (
+        db.query(AvailabilityWindow)
+        .filter(
+            AvailabilityWindow.id == slot_id,
+            AvailabilityWindow.teacher_id == user.teacher.id,
+        )
+        .first()
+    )
+    redirect_week = f"&week_start={week_start}" if week_start else ""
+    if not window:
+        return RedirectResponse(url=f"/teacher/planner?feedback=invalid{redirect_week}", status_code=302)
+
+    has_booking = (
+        db.query(Appointment)
+        .filter(
+            Appointment.teacher_id == user.teacher.id,
+            Appointment.status == "booked",
+            Appointment.start_at < window.end_at,
+            Appointment.end_at > window.start_at,
+        )
+        .first()
+    )
+    if has_booking:
+        return RedirectResponse(url=f"/teacher/planner?feedback=has_booking{redirect_week}", status_code=302)
+
+    db.delete(window)
+    db.commit()
+    return RedirectResponse(url=f"/teacher/planner?feedback=deleted{redirect_week}", status_code=302)
 
 
 @router.get("/appointments")

@@ -33,6 +33,7 @@
             <a class="mobile-nav-link mobile-nav-link-main{% if current_path.startswith('/student/settings') %} active{% endif %}" href="/student/settings">Einstellungen</a>
         {% elif user.role == "teacher" %}
             <a class="mobile-nav-link mobile-nav-link-main{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments">Termine</a>
+            <a class="mobile-nav-link mobile-nav-link-main{% if current_path.startswith('/teacher/planner') %} active{% endif %}" href="/teacher/planner">Kalender</a>
             <a class="mobile-nav-link mobile-nav-link-main{% if current_path.startswith('/teacher/settings') %} active{% endif %}" href="/teacher/settings">Einstellungen</a>
         {% endif %}
     </nav>
@@ -51,7 +52,8 @@
                     <a class="rail-link{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments" title="Termine">🗂</a>
                     <a class="rail-link{% if current_path.startswith('/student/settings') %} active{% endif %}" href="/student/settings" title="Einstellungen">⚙</a>
                 {% elif user.role == "teacher" %}
-                    <a class="rail-link{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments" title="Termine">🏠</a>
+                    <a class="rail-link{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments" title="Termine">🗂</a>
+                    <a class="rail-link{% if current_path.startswith('/teacher/planner') %} active{% endif %}" href="/teacher/planner" title="Kalender">📅</a>
                     <a class="rail-link{% if current_path.startswith('/teacher/settings') %} active{% endif %}" href="/teacher/settings" title="Einstellungen">⚙</a>
                 {% else %}
                     <a class="rail-link{% if current_path == '/dashboard' %} active{% endif %}" href="/dashboard" title="Dashboard">D</a>
@@ -116,6 +118,9 @@
                     <a class="sidebar-link{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments">
                         <span class="sidebar-link-icon">🗂️</span>Termine
                     </a>
+                    <a class="sidebar-link{% if current_path.startswith('/teacher/planner') %} active{% endif %}" href="/teacher/planner">
+                        <span class="sidebar-link-icon">📅</span>Kalender
+                    </a>
                     <a class="sidebar-link{% if current_path.startswith('/teacher/settings') %} active{% endif %}" href="/teacher/settings">
                         <span class="sidebar-link-icon">⚙️</span>Einstellungen
                     </a>
@@ -149,13 +154,14 @@
 {% if user %}
     </main>
 </div>
-<nav class="mobile-bottom-nav d-lg-none{% if user.role == 'admin' %} count-4{% elif user.role == 'student' %} count-3{% else %} count-2{% endif %}" aria-label="Mobile Schnellnavigation">
+<nav class="mobile-bottom-nav d-lg-none{% if user.role == 'admin' %} count-4{% elif user.role == 'student' %} count-3{% elif user.role == 'teacher' %} count-3{% else %} count-2{% endif %}" aria-label="Mobile Schnellnavigation">
     {% if user.role == "student" %}
         <a class="mobile-bottom-link{% if current_path.startswith('/portal') %} active{% endif %}" href="/portal"><span class="mobile-bottom-icon">🏠</span><span>Dashboard</span></a>
         <a class="mobile-bottom-link{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments"><span class="mobile-bottom-icon">🗂️</span><span>Termine</span></a>
         <a class="mobile-bottom-link{% if current_path.startswith('/student/settings') %} active{% endif %}" href="/student/settings"><span class="mobile-bottom-icon">⚙️</span><span>Einstellungen</span></a>
     {% elif user.role == "teacher" %}
-        <a class="mobile-bottom-link{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments"><span class="mobile-bottom-icon">🏠</span><span>Termine</span></a>
+        <a class="mobile-bottom-link{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments"><span class="mobile-bottom-icon">🗂️</span><span>Termine</span></a>
+        <a class="mobile-bottom-link{% if current_path.startswith('/teacher/planner') %} active{% endif %}" href="/teacher/planner"><span class="mobile-bottom-icon">📅</span><span>Kalender</span></a>
         <a class="mobile-bottom-link{% if current_path.startswith('/teacher/settings') %} active{% endif %}" href="/teacher/settings"><span class="mobile-bottom-icon">⚙️</span><span>Einstellungen</span></a>
     {% else %}
         <a class="mobile-bottom-link{% if current_path == '/dashboard' %} active{% endif %}" href="/dashboard"><span class="mobile-bottom-icon">🏠</span><span>Home</span></a>
@@ -228,6 +234,34 @@
         if (mobileImg && s.logo_url) {
             mobileImg.src = s.logo_url;
             mobileImg.alt = s.name || 'Schullogo';
+        }
+    }).catch(function(){});
+
+    // Rail notification badges
+    fetch('/api/rail-badges', {credentials: 'same-origin'}).then(function(r){ return r.json(); }).then(function(b){
+        function addBadge(el, count, color) {
+            if (!el || count < 1) return;
+            var badge = document.createElement('span');
+            badge.className = 'rail-badge';
+            badge.style.cssText = 'position:absolute;top:2px;right:2px;min-width:16px;height:16px;border-radius:8px;background:' + color + ';color:#fff;font-size:10px;font-weight:700;line-height:16px;text-align:center;padding:0 3px;pointer-events:none;';
+            badge.textContent = count > 9 ? '9+' : count;
+            el.style.position = 'relative';
+            el.appendChild(badge);
+        }
+        var railLinks = document.querySelectorAll('.rail-links .rail-link');
+        railLinks.forEach(function(link) {
+            var href = link.getAttribute('href') || '';
+            if (href.includes('/appointments') || href.includes('/teacher/planner')) {
+                if (b.pending > 0) addBadge(link, b.pending, '#f59e0b');
+            }
+        });
+        // Today badge on first rail link (home/termine)
+        if (railLinks.length > 0 && b.today > 0) {
+            var firstLink = railLinks[0];
+            var href = firstLink.getAttribute('href') || '';
+            if (href.includes('/appointments') || href.includes('/portal') || href.includes('/dashboard')) {
+                addBadge(firstLink, b.today, '#3b82f6');
+            }
         }
     }).catch(function(){});
 </script>

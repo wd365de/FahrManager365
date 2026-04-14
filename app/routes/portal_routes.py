@@ -235,20 +235,31 @@ def student_settings_form(request: Request, db: Session = Depends(get_db)):
 @router.post("/student/settings")
 def student_settings_save(
     request: Request,
+    email: str = Form(""),
     mobile_phone: str = Form(""),
     whatsapp_phone: str = Form(""),
     whatsapp_opted_in: str = Form(""),
     reminder_minutes: int = Form(30),
+    street: str = Form(""),
+    house_number: str = Form(""),
+    postal_code: str = Form(""),
+    city: str = Form(""),
     db: Session = Depends(get_db),
 ):
     user = get_authenticated_user(request, db)
     if not user or user.role != "student" or not user.student:
         return redirect_to_login()
 
+    if email.strip():
+        user.email = email.strip().lower()
     user.student.mobile_phone = mobile_phone.strip() or None
     cleaned = "".join(c for c in whatsapp_phone if c.isdigit())
     user.student.whatsapp_phone = cleaned or None
     user.student.whatsapp_opted_in = whatsapp_opted_in == "on"
     user.student.reminder_minutes = max(5, min(240, reminder_minutes))
+    user.student.street = street.strip() or None
+    user.student.house_number = house_number.strip() or None
+    user.student.postal_code = postal_code.strip() or None
+    user.student.city = city.strip() or None
     db.commit()
     return RedirectResponse(url="/student/settings?saved=1", status_code=302)
