@@ -48,6 +48,7 @@
                     <a class="rail-link{% if current_path.startswith('/portal') %} active{% endif %}" href="/portal" title="Mein Portal">🏠</a>
                 {% elif user.role == "teacher" %}
                     <a class="rail-link{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments" title="Termine">🏠</a>
+                    <a class="rail-link{% if current_path.startswith('/teacher/settings') %} active{% endif %}" href="/teacher/settings" title="Einstellungen">⚙</a>
                 {% else %}
                     <a class="rail-link{% if current_path == '/dashboard' %} active{% endif %}" href="/dashboard" title="Dashboard">D</a>
                     <a class="rail-link{% if current_path.startswith('/slots') %} active{% endif %}" href="/slots" title="Terminplaner">T</a>
@@ -112,6 +113,9 @@
                     <a class="sidebar-link{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments">
                         <span class="sidebar-link-icon">🗂️</span>Termine
                     </a>
+                    <a class="sidebar-link{% if current_path.startswith('/teacher/settings') %} active{% endif %}" href="/teacher/settings">
+                        <span class="sidebar-link-icon">⚙️</span>Einstellungen
+                    </a>
                 {% elif user.role == "student" %}
                     <a class="sidebar-link{% if current_path.startswith('/portal') %} active{% endif %}" href="/portal">
                         <span class="sidebar-link-icon">📘</span>Portal
@@ -145,6 +149,7 @@
         <a class="mobile-bottom-link{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments"><span class="mobile-bottom-icon">🗂️</span><span>Termine</span></a>
     {% elif user.role == "teacher" %}
         <a class="mobile-bottom-link{% if current_path.startswith('/appointments') %} active{% endif %}" href="/appointments"><span class="mobile-bottom-icon">🏠</span><span>Termine</span></a>
+        <a class="mobile-bottom-link{% if current_path.startswith('/teacher/settings') %} active{% endif %}" href="/teacher/settings"><span class="mobile-bottom-icon">⚙️</span><span>Einstellungen</span></a>
     {% else %}
         <a class="mobile-bottom-link{% if current_path == '/dashboard' %} active{% endif %}" href="/dashboard"><span class="mobile-bottom-icon">🏠</span><span>Home</span></a>
         <a class="mobile-bottom-link{% if current_path.startswith('/slots') %} active{% endif %}" href="/slots"><span class="mobile-bottom-icon">📅</span><span>Planen</span></a>

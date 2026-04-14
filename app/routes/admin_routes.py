@@ -1692,6 +1692,8 @@ def teacher_edit(
     request: Request,
     name: str = Form(...),
     email: str = Form(...),
+    whatsapp_phone: str = Form(""),
+    reminder_minutes: int = Form(30),
     db: Session = Depends(get_db),
 ):
     admin_user, redirect = require_admin(request, db)
@@ -1714,6 +1716,9 @@ def teacher_edit(
 
     teacher.user.name = name.strip()
     teacher.user.email = email.strip()
+    cleaned = "".join(c for c in whatsapp_phone if c.isdigit())
+    teacher.whatsapp_phone = cleaned or None
+    teacher.reminder_minutes = max(5, min(240, reminder_minutes))
     db.commit()
     return RedirectResponse(url="/teachers", status_code=302)
 

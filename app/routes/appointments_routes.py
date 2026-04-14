@@ -103,6 +103,41 @@ def send_booking_notification_email(db: Session, appointment: Appointment, is_re
         return
 
 
+@router.get("/teacher/settings")
+def teacher_settings_form(request: Request, db: Session = Depends(get_db)):
+    user = get_authenticated_user(request, db)
+    if not user or user.role != "teacher" or not user.teacher:
+        return redirect_to_login()
+    saved = request.query_params.get("saved") == "1"
+    return templates.TemplateResponse(
+        "teacher_settings.html",
+        {
+            "request": request,
+            "user": user,
+            "teacher": user.teacher,
+            "push_available": has_push_config(),
+            "saved": saved,
+        },
+    )
+
+
+@router.post("/teacher/settings")
+def teacher_settings_save(
+    request: Request,
+    reminder_minutes: int = Form(30),
+    whatsapp_phone: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    user = get_authenticated_user(request, db)
+    if not user or user.role != "teacher" or not user.teacher:
+        return redirect_to_login()
+    user.teacher.reminder_minutes = max(5, min(240, reminder_minutes))
+    cleaned = "".join(c for c in whatsapp_phone if c.isdigit())
+    user.teacher.whatsapp_phone = cleaned or None
+    db.commit()
+    return RedirectResponse(url="/teacher/settings?saved=1", status_code=302)
+
+
 @router.get("/appointments")
 def appointments_list(request: Request, db: Session = Depends(get_db)):
     user = get_authenticated_user(request, db)
