@@ -79,10 +79,13 @@ class Student(Base):
     whatsapp_phone = Column(String(50), nullable=True)
     whatsapp_opted_in = Column(Boolean, nullable=False, default=False)
     reminder_minutes = Column(Integer, nullable=False, default=30)
+    signature_data = Column(Text, nullable=True)       # base64 PNG
+    contract_signed_at = Column(DateTime, nullable=True)
 
     user = relationship("User", back_populates="student")
     teacher = relationship("Teacher", back_populates="students")
     appointments = relationship("Appointment", back_populates="student")
+    invoices = relationship("Invoice", back_populates="student", order_by="Invoice.invoice_date.desc()")
 
 
 class Teacher(Base):
@@ -174,6 +177,24 @@ class ExamRegistration(Base):
 
     student = relationship("Student")
     inspector = relationship("ExamInspector", back_populates="registrations")
+
+
+class Invoice(Base):
+    __tablename__ = "invoices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    invoice_number = Column(String(50), nullable=False, unique=True)
+    invoice_date = Column(String(20), nullable=False)   # ISO date
+    due_date = Column(String(20), nullable=True)
+    items_json = Column(Text, nullable=False, default="[]")  # JSON list
+    tax_rate = Column(Integer, nullable=False, default=0)    # % (0 or 19)
+    notes = Column(Text, nullable=True)
+    status = Column(String(20), nullable=False, default="offen")  # offen/bezahlt/storniert
+    stripe_payment_url = Column(Text, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    student = relationship("Student", back_populates="invoices")
 
 
 class AppSetting(Base):

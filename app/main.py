@@ -20,6 +20,7 @@ from app.reminder import start_reminder_scheduler, stop_reminder_scheduler
 from app.routes.admin_routes import router as admin_router
 from app.routes.appointments_routes import router as appointments_router
 from app.routes.auth_routes import router as auth_router
+from app.routes.invoice_routes import router as invoice_router
 from app.routes.portal_routes import router as portal_router
 from app.routes.push_routes import router as push_router
 from app.routes.theme_routes import router as theme_router
@@ -313,6 +314,12 @@ def run_local_schema_migrations() -> None:
         if "reminder_minutes" not in columns:
             with engine.begin() as connection:
                 connection.execute(text("ALTER TABLE students ADD COLUMN reminder_minutes INTEGER NOT NULL DEFAULT 30"))
+        if "signature_data" not in columns:
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE students ADD COLUMN signature_data TEXT"))
+        if "contract_signed_at" not in columns:
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE students ADD COLUMN contract_signed_at TIMESTAMP"))
 
     if inspector.has_table("teachers"):
         columns = {column["name"] for column in inspector.get_columns("teachers")}
@@ -322,6 +329,13 @@ def run_local_schema_migrations() -> None:
         if "reminder_minutes" not in columns:
             with engine.begin() as connection:
                 connection.execute(text("ALTER TABLE teachers ADD COLUMN reminder_minutes INTEGER NOT NULL DEFAULT 30"))
+
+    # Invoice table migrations
+    if inspector.has_table("invoices"):
+        columns = {column["name"] for column in inspector.get_columns("invoices")}
+        if "stripe_payment_url" not in columns:
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE invoices ADD COLUMN stripe_payment_url TEXT"))
 
     # Replace uq_teacher_appointment with a partial unique index (booked only),
     # so cancelled slots can be re-booked without a DB constraint violation.
@@ -361,6 +375,7 @@ def on_shutdown() -> None:
 app.include_router(auth_router)
 app.include_router(admin_router)
 app.include_router(appointments_router)
+app.include_router(invoice_router)
 app.include_router(portal_router)
 app.include_router(push_router)
 app.include_router(theme_router)

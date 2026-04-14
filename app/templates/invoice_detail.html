@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+        <a href="/invoices" class="text-muted small text-decoration-none">← Rechnungen</a>
+        <h1 class="h4 mb-0 mt-1">{{ invoice.invoice_number }}</h1>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a class="btn btn-outline-secondary btn-sm" href="/invoices/{{ invoice.id }}/pdf" target="_blank">PDF herunterladen</a>
+        {% if not invoice.stripe_payment_url %}
+        <form method="post" action="/invoices/{{ invoice.id }}/stripe-link">
+            <button class="btn btn-primary btn-sm" type="submit">Zahlungslink erstellen</button>
+        </form>
+        {% else %}
+        <a class="btn btn-success btn-sm" href="{{ invoice.stripe_payment_url }}" target="_blank">Zahlungslink öffnen</a>
+        <form method="post" action="/invoices/{{ invoice.id }}/stripe-link" class="d-inline">
+            <button class="btn btn-outline-secondary btn-sm" type="submit">Neu generieren</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+{% if saved %}<div class="alert alert-success alert-dismissible fade show"><button type="button" class="btn-close" data-bs-dismiss="alert"></button>Rechnung gespeichert.</div>{% endif %}
+{% if request.query_params.get('error') == 'no_stripe_key' %}
+<div class="alert alert-warning">Kein Stripe-API-Key konfiguriert. Bitte <code>STRIPE_SECRET_KEY</code> in der .env setzen.</div>
+{% endif %}
+{% if request.query_params.get('paid') == '1' %}
+<div class="alert alert-success">Zahlung erfolgreich — bitte Status auf „Bezahlt" setzen.</div>
+{% endif %}
+
+<div class="row g-3">
+    <div class="col-md-8">
+        {# Rechnungsdetails #}
+        <div class="card card-body mb-3">
+            <div class="row g-2 mb-3">
+                <div class="col-sm-4"><div class="small text-muted">Schüler</div><strong>{{ invoice.student.user.name if invoice.student and invoice.student.user else '–' }}</strong></div>
+                <div class="col-sm-4"><div class="small text-muted">Datum</div><strong>{{ invoice.invoice_date }}</strong></div>
+                <div class="col-sm-4"><div class="small text-muted">Fällig bis</div><strong>{{ invoice.due_date or '–' }}</strong></div>
+            </div>
+            <table class="table table-sm mb-2">
+                <thead class="table-dark"><tr><th>Beschreibung</th><th class="text-end">Menge</th><th class="text-end">Einzelpreis</th><th class="text-end">Gesamt</th></tr></thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td>{{ item.description }}</td>
+                        <td class="text-end">{{ item.quantity|int if item.quantity == item.quantity|int else item.quantity }}</td>
+                        <td class="text-end">{{ "%.2f"|format(item.unit_price) }} €</td>
+                        <td class="text-end">{{ "%.2f"|format(item.quantity * item.unit_price) }} €</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr><td colspan="3" class="text-end">Zwischensumme</td><td class="text-end">{{ "%.2f"|format(subtotal) }} €</td></tr>
+                    {% if invoice.tax_rate > 0 %}
+                    <tr><td colspan="3" class="text-end">MwSt. {{ invoice.tax_rate }}%</td><td class="text-end">{{ "%.2f"|format(tax_amount) }} €</td></tr>
+                    {% endif %}
+                    <tr class="fw-bold"><td colspan="3" class="text-end">Gesamtbetrag</td><td class="text-end">{{ "%.2f"|format(total) }} €</td></tr>
+                </tfoot>
+            </table>
+            {% if invoice.tax_rate == 0 %}
+            <div class="small text-muted">Gemäß §4 Nr. 21 UStG steuerfreie Leistung.</div>
+            {% endif %}
+            {% if invoice.notes %}
+            <hr class="my-2">
+            <div class="small">{{ invoice.notes }}</div>
+            {% endif %}
+        </div>
+
+        {% if invoice.stripe_payment_url %}
+        <div class="card card-body mb-3 border-primary">
+            <h6 class="mb-2">Zahlungslink (Stripe)</h6>
+            <div class="input-group input-group-sm">
+                <input class="form-control font-monospace" type="text" id="stripe-url" value="{{ invoice.stripe_payment_url }}" readonly>
+                <button class="btn btn-outline-secondary" type="button" onclick="navigator.clipboard.writeText(document.getElementById('stripe-url').value)">Kopieren</button>
+            </div>
+            <div class="form-text">Schüler können per Kreditkarte oder SEPA-Lastschrift bezahlen.</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-4">
+        <div class="card card-body">
+            <h6 class="mb-3">Status</h6>
+            <div class="mb-3">
+                {% if invoice.status == 'bezahlt' %}<span class="badge bg-success fs-6">Bezahlt</span>
+                {% elif invoice.status == 'storniert' %}<span class="badge bg-secondary fs-6">Storniert</span>
+                {% else %}<span class="badge bg-warning text-dark fs-6">Offen</span>{% endif %}
+            </div>
+            <form method="post" action="/invoices/{{ invoice.id }}/status" class="d-flex flex-column gap-2">
+                {% if invoice.status != 'bezahlt' %}
+                <button name="status" value="bezahlt" class="btn btn-success btn-sm">Als bezahlt markieren</button>
+                {% endif %}
+                {% if invoice.status != 'offen' %}
+                <button name="status" value="offen" class="btn btn-outline-warning btn-sm">Auf offen setzen</button>
+                {% endif %}
+                {% if invoice.status != 'storniert' %}
+                <button name="status" value="storniert" class="btn btn-outline-danger btn-sm"
+                        onclick="return confirm('Rechnung wirklich stornieren?')">Stornieren</button>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

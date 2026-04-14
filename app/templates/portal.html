@@ -353,6 +353,31 @@
 </div>
 
 
+{# ── Digitale Unterschrift ────────────────────────────────────────────── #}
+{% if not student_contract_signed %}
+<div class="card card-body mb-4 border-warning">
+    <h2 class="h5 mb-2">✍️ Ausbildungsvertrag unterschreiben</h2>
+    <p class="small text-muted mb-3">Bitte unterschreibe einmalig zur Bestätigung deines Ausbildungsvertrages.</p>
+    <canvas id="signature-canvas" width="500" height="150"
+            style="border:1px solid #cbd5e1;border-radius:6px;touch-action:none;background:#fff;max-width:100%;"></canvas>
+    <div class="d-flex gap-2 mt-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="sig-clear-btn">Löschen</button>
+        <button type="button" class="btn btn-success btn-sm" id="sig-save-btn">Unterschrift speichern</button>
+    </div>
+    <div id="sig-status" class="small mt-2 text-muted"></div>
+</div>
+{% else %}
+<div class="card card-body mb-4 border-success bg-success bg-opacity-10">
+    <div class="d-flex align-items-center gap-2">
+        <span style="font-size:1.3rem;">✅</span>
+        <div>
+            <strong>Ausbildungsvertrag unterschrieben</strong>
+            <div class="small text-muted">am {{ student_contract_signed_at.strftime('%d.%m.%Y um %H:%M') if student_contract_signed_at else '' }}</div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <script id="portal-push-mvp-available" type="application/json">{{ push_mvp_available | tojson }}</script>
 <script id="portal-auto-reminders-enabled" type="application/json">{{ auto_reminders_enabled | tojson }}</script>
 <script>
@@ -463,6 +488,46 @@
         enableBtn.addEventListener('click', function(){ enablePush().catch(function(e){ setStatus(e.message || 'Fehler.', true); }); });
         disableBtn.addEventListener('click', function(){ disablePush().catch(function(e){ setStatus(e.message || 'Fehler.', true); }); });
         testBtn.addEventListener('click', function(){ sendTestPush().catch(function(e){ setStatus(e.message || 'Fehler.', true); }); });
+    })();
+
+    // ── Signature Canvas ───────────────────────────────────────────
+    (function() {
+        var canvas = document.getElementById('signature-canvas');
+        if (!canvas) return;
+        var ctx = canvas.getContext('2d');
+        var drawing = false;
+        function getPos(e) {
+            var rect = canvas.getBoundingClientRect();
+            var scaleX = canvas.width / rect.width;
+            var scaleY = canvas.height / rect.height;
+            var src = e.touches ? e.touches[0] : e;
+            return { x: (src.clientX - rect.left) * scaleX, y: (src.clientY - rect.top) * scaleY };
+        }
+        canvas.addEventListener('mousedown', function(e){ drawing=true; var p=getPos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); });
+        canvas.addEventListener('mousemove', function(e){ if(!drawing) return; var p=getPos(e); ctx.lineWidth=2; ctx.lineCap='round'; ctx.strokeStyle='#1e293b'; ctx.lineTo(p.x,p.y); ctx.stroke(); });
+        canvas.addEventListener('mouseup', function(){ drawing=false; });
+        canvas.addEventListener('mouseleave', function(){ drawing=false; });
+        canvas.addEventListener('touchstart', function(e){ e.preventDefault(); drawing=true; var p=getPos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); }, {passive:false});
+        canvas.addEventListener('touchmove', function(e){ e.preventDefault(); if(!drawing) return; var p=getPos(e); ctx.lineWidth=2; ctx.lineCap='round'; ctx.strokeStyle='#1e293b'; ctx.lineTo(p.x,p.y); ctx.stroke(); }, {passive:false});
+        canvas.addEventListener('touchend', function(){ drawing=false; });
+
+        document.getElementById('sig-clear-btn').addEventListener('click', function(){
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        });
+        document.getElementById('sig-save-btn').addEventListener('click', function(){
+            var dataUrl = canvas.toDataURL('image/png');
+            var statusEl = document.getElementById('sig-status');
+            statusEl.textContent = 'Speichern...';
+            fetch('/portal/sign-contract', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'same-origin',
+                body: JSON.stringify({signature: dataUrl})
+            }).then(function(r){ return r.json(); }).then(function(d){
+                if (d.ok) { location.reload(); }
+                else { statusEl.textContent = 'Fehler: ' + (d.error || 'Unbekannt'); }
+            }).catch(function(e){ statusEl.textContent = 'Fehler: ' + e.message; });
+        });
     })();
 </script>
 {% endblock %}

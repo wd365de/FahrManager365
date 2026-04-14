@@ -2,7 +2,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
@@ -162,6 +162,8 @@ def portal(request: Request, db: Session = Depends(get_db)):
             "request": request,
             "user": user,
             "now": now,
+            "student_contract_signed": bool(user.student.contract_signed_at),
+            "student_contract_signed_at": user.student.contract_signed_at,
             "appointments": appointments,
             "readiness": readiness,
             "booking_options": filtered_options,
@@ -189,6 +191,21 @@ def portal(request: Request, db: Session = Depends(get_db)):
             "just_booked": just_booked,
         },
     )
+
+
+@router.post("/portal/sign-contract")
+async def portal_sign_contract(request: Request, db: Session = Depends(get_db)):
+    user = get_authenticated_user(request, db)
+    if not user or user.role != "student" or not user.student:
+        return JSONResponse({"ok": False, "error": "Nicht eingeloggt"}, status_code=401)
+    body = await request.json()
+    sig = (body.get("signature") or "").strip()
+    if not sig or not sig.startswith("data:image/png;base64,"):
+        return JSONResponse({"ok": False, "error": "Ungültige Unterschrift"})
+    user.student.signature_data = sig
+    user.student.contract_signed_at = datetime.now()
+    db.commit()
+    return JSONResponse({"ok": True})
 
 
 @router.post("/portal/whatsapp")

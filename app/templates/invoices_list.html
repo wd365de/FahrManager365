@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h4 mb-0">Rechnungen</h1>
+    <button class="btn btn-success btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#newInvoiceForm">+ Neue Rechnung</button>
+</div>
+
+{% if saved %}
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    Rechnung gespeichert.
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{# ── Neue Rechnung ──────────────────────────────────────────────────── #}
+<div class="collapse mb-4" id="newInvoiceForm">
+<div class="card card-body">
+    <h2 class="h6 fw-bold mb-3">Neue Rechnung</h2>
+    <form method="post" action="/invoices/new" id="invoice-form">
+        <div class="row g-3 mb-3">
+            <div class="col-md-4">
+                <label class="form-label">Schüler</label>
+                <select class="form-select" name="student_id" required>
+                    {% for s in students %}
+                    <option value="{{ s.id }}">{{ s.user.name if s.user else '?' }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Rechnungsdatum</label>
+                <input class="form-control" type="date" name="invoice_date" value="{{ today }}" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Fällig bis</label>
+                <input class="form-control" type="date" name="due_date" value="{{ due_date_default }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">MwSt. %</label>
+                <select class="form-select" name="tax_rate">
+                    <option value="0" selected>0% (steuerfrei)</option>
+                    <option value="7">7%</option>
+                    <option value="19">19%</option>
+                </select>
+            </div>
+        </div>
+
+        {# Positionen #}
+        <h6 class="mb-2">Positionen</h6>
+        <div id="invoice-items">
+            <div class="row g-2 mb-2 invoice-item-row">
+                <div class="col-md-6"><input class="form-control form-control-sm" type="text" name="item_desc" placeholder="Beschreibung" required></div>
+                <div class="col-md-2"><input class="form-control form-control-sm" type="number" name="item_qty" placeholder="Menge" value="1" step="0.5" min="0.5" required></div>
+                <div class="col-md-3"><input class="form-control form-control-sm" type="text" name="item_price" placeholder="Einzelpreis (€)" required></div>
+                <div class="col-md-1 d-flex align-items-center"><button type="button" class="btn btn-sm btn-outline-danger remove-item-btn" style="display:none">✕</button></div>
+            </div>
+        </div>
+        <button type="button" class="btn btn-outline-secondary btn-sm mb-3" id="add-item-btn">+ Position hinzufügen</button>
+
+        <div class="mb-3">
+            <label class="form-label">Hinweis / Notiz</label>
+            <textarea class="form-control" name="notes" rows="2" placeholder="z.B. Zahlbar per Überweisung auf IBAN ..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-success">Rechnung erstellen</button>
+    </form>
+</div>
+</div>
+
+{# ── Rechnungsliste ─────────────────────────────────────────────────── #}
+<div class="card card-body">
+    {% if invoices_with_totals %}
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Nr.</th>
+                    <th>Schüler</th>
+                    <th>Datum</th>
+                    <th>Status</th>
+                    <th class="text-end">Betrag</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in invoices_with_totals %}
+                {% set inv = row.invoice %}
+                <tr>
+                    <td class="text-nowrap fw-semibold">{{ inv.invoice_number }}</td>
+                    <td>{{ inv.student.user.name if inv.student and inv.student.user else '–' }}</td>
+                    <td class="text-nowrap">{{ inv.invoice_date }}</td>
+                    <td>
+                        {% if inv.status == 'bezahlt' %}<span class="badge bg-success">Bezahlt</span>
+                        {% elif inv.status == 'storniert' %}<span class="badge bg-secondary">Storniert</span>
+                        {% else %}<span class="badge bg-warning text-dark">Offen</span>{% endif %}
+                    </td>
+                    <td class="text-end text-nowrap">{{ "%.2f"|format(row.total) }} €</td>
+                    <td><a class="btn btn-outline-primary btn-sm" href="/invoices/{{ inv.id }}">Öffnen</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-muted">Noch keine Rechnungen vorhanden.</div>
+    {% endif %}
+</div>
+
+<script>
+var today = new Date().toISOString().slice(0, 10);
+var due = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
+document.querySelector('[name="invoice_date"]').value = today;
+document.querySelector('[name="due_date"]').value = due;
+
+document.getElementById('add-item-btn').addEventListener('click', function() {
+    var container = document.getElementById('invoice-items');
+    var first = container.querySelector('.invoice-item-row');
+    var clone = first.cloneNode(true);
+    clone.querySelectorAll('input').forEach(function(i){ i.value = i.getAttribute('value') || ''; });
+    clone.querySelector('.remove-item-btn').style.display = '';
+    clone.querySelector('.remove-item-btn').addEventListener('click', function(){ clone.remove(); });
+    container.appendChild(clone);
+});
+</script>
+{% endblock %}
