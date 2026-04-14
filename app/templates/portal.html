@@ -127,7 +127,7 @@
     {% if not all_booking_options %}
         {% if assigned_teacher_name %}
             <div class="alert alert-info mb-0">
-                <strong>{{ assigned_teacher_name }}</strong> hat aktuell keine buchbaren Fahrstunden in den nächsten {{ booking_window_days }} Tagen. Bitte später schauen oder Fahrschule kontaktieren.
+                <strong>{{ assigned_teacher_name }}</strong> hat aktuell keine freien Fahrstunden eingetragen. Bitte später schauen oder Fahrschule kontaktieren.
             </div>
         {% else %}
             <div class="alert alert-warning mb-0">Noch kein Fahrlehrer zugewiesen.</div>
@@ -151,11 +151,14 @@
                 {% for option in options %}
                     <form method="post" action="/appointments/book" class="mobile-request-form mobile-slot-card">
                         <div class="small mb-1"><strong>{{ option.start_at.strftime('%H:%M') }} – {{ option.end_at.strftime('%H:%M') }}</strong> · {{ option.duration_min }} min</div>
+                        {% if option.booking_mode == 'request' %}<div class="small text-warning mb-1">Anfrage · Bestätigung durch Fahrlehrer</div>{% endif %}
                         <input type="hidden" name="window_id" value="{{ option.window_id }}">
                         <input type="hidden" name="start_at" value="{{ option.start_iso }}">
                         <input type="hidden" name="duration_min" value="{{ option.duration_min }}">
                         <textarea class="form-control form-control-sm mb-2" name="request_message" rows="1" placeholder="Notiz (optional)"></textarea>
-                        <button class="btn btn-sm btn-success w-100" type="submit" {% if not option.can_submit_now %}disabled{% endif %}>Buchen</button>
+                        <button class="btn btn-sm {% if option.booking_mode == 'request' %}btn-warning{% else %}btn-success{% endif %} w-100" type="submit" {% if not option.can_submit_now %}disabled{% endif %}>
+                            {% if option.booking_mode == 'request' %}Anfragen{% else %}Buchen{% endif %}
+                        </button>
                     </form>
                 {% endfor %}
             </section>
@@ -173,14 +176,17 @@
                         {% set options = options_by_day[day.date] %}
                         {% if options %}
                             {% for option in options %}
-                                <form method="post" action="/appointments/book" class="border rounded p-2 mb-1">
+                                <form method="post" action="/appointments/book" class="border rounded p-2 mb-1 {% if option.booking_mode == 'request' %}border-warning{% endif %}">
                                     <div class="small mb-1 fw-semibold">{{ option.start_at.strftime('%H:%M') }} – {{ option.end_at.strftime('%H:%M') }}</div>
-                                    <div class="small text-muted mb-2">{{ option.duration_min }} min</div>
+                                    <div class="small text-muted mb-1">{{ option.duration_min }} min</div>
+                                    {% if option.booking_mode == 'request' %}<div class="small text-warning mb-1">Anfrage</div>{% endif %}
                                     <input type="hidden" name="window_id" value="{{ option.window_id }}">
                                     <input type="hidden" name="start_at" value="{{ option.start_iso }}">
                                     <input type="hidden" name="duration_min" value="{{ option.duration_min }}">
                                     <textarea class="form-control form-control-sm mb-2" name="request_message" rows="1" placeholder="Notiz (optional)"></textarea>
-                                    <button class="btn btn-sm btn-success w-100" type="submit" {% if not option.can_submit_now %}disabled{% endif %}>Buchen</button>
+                                    <button class="btn btn-sm {% if option.booking_mode == 'request' %}btn-warning{% else %}btn-success{% endif %} w-100" type="submit" {% if not option.can_submit_now %}disabled{% endif %}>
+                                        {% if option.booking_mode == 'request' %}Anfragen{% else %}Buchen{% endif %}
+                                    </button>
                                 </form>
                             {% endfor %}
                         {% else %}
