@@ -109,4 +109,61 @@
     </div>
 </div>
 
+{# ── Alle kommenden Slots ─────────────────────────────────────────────── #}
+<div class="card card-body mb-4">
+    <h2 class="h5 mb-3">Alle kommenden Slots
+        <span class="badge bg-secondary ms-2" style="font-size:.75rem;">{{ all_upcoming_windows|length }}</span>
+    </h2>
+    {% if not all_upcoming_windows %}
+        <div class="text-muted small">Keine kommenden Slots vorhanden.</div>
+    {% else %}
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Datum</th>
+                    <th>Zeit</th>
+                    <th>Dauer</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for slot in all_upcoming_windows %}
+                {% set booking = upcoming_booking_map.get(slot.id) %}
+                <tr class="{% if booking %}table-success{% endif %}">
+                    <td class="text-nowrap">
+                        {{ slot.start_at.strftime('%d.%m.%Y') }}
+                    </td>
+                    <td class="text-nowrap">{{ slot.start_at.strftime('%H:%M') }} – {{ slot.end_at.strftime('%H:%M') }}</td>
+                    <td class="text-nowrap">{{ ((slot.end_at - slot.start_at).total_seconds() // 60)|int }} Min</td>
+                    <td>
+                        {% if booking %}
+                            <span class="badge bg-success">
+                                Gebucht · {{ booking.student.user.name if booking.student and booking.student.user else '?' }}
+                            </span>
+                            {% if booking.requires_teacher_confirmation %}
+                                <span class="badge bg-warning text-dark ms-1">Anfrage</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="badge bg-light text-muted border">Frei</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if not booking %}
+                        <form method="post" action="/teacher/planner/slots/{{ slot.id }}/delete"
+                              onsubmit="return confirm('Slot löschen?')" class="d-inline">
+                            <input type="hidden" name="week_start" value="{{ week_start }}">
+                            <button class="btn btn-outline-danger btn-sm py-0 px-1" type="submit" title="Löschen">✕</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+
 {% endblock %}

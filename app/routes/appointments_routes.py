@@ -149,7 +149,24 @@ def teacher_planner(request: Request, db: Session = Depends(get_db)):
 
     week_start_param = request.query_params.get("week_start")
     try:
-        week_start = date.fromisoformat(week_start_param) if week_start_param else today - timedelta(days=today.weekday())
+        if week_start_param:
+            week_start = date.fromisoformat(week_start_param)
+        else:
+            # Default to the week of the next upcoming slot, fallback to current week
+            next_window = (
+                db.query(AvailabilityWindow)
+                .filter(
+                    AvailabilityWindow.teacher_id == teacher.id,
+                    AvailabilityWindow.start_at >= datetime.combine(today, datetime.min.time()),
+                )
+                .order_by(AvailabilityWindow.start_at.asc())
+                .first()
+            )
+            if next_window:
+                anchor = next_window.start_at.date()
+                week_start = anchor - timedelta(days=anchor.weekday())
+            else:
+                week_start = today - timedelta(days=today.weekday())
     except ValueError:
         week_start = today - timedelta(days=today.weekday())
 
@@ -213,6 +230,34 @@ def teacher_planner(request: Request, db: Session = Depends(get_db)):
         .all()
     )
 
+    # All upcoming slots for the list view
+    all_upcoming_windows = (
+        db.query(AvailabilityWindow)
+        .filter(
+            AvailabilityWindow.teacher_id == teacher.id,
+            AvailabilityWindow.end_at >= datetime.now(),
+        )
+        .order_by(AvailabilityWindow.start_at.asc())
+        .all()
+    )
+    all_upcoming_appointments = (
+        db.query(Appointment)
+        .options(joinedload(Appointment.student).joinedload(Student.user))
+        .filter(
+            Appointment.teacher_id == teacher.id,
+            Appointment.status == "booked",
+            Appointment.end_at >= datetime.now(),
+        )
+        .all()
+    )
+    # Map window.id → booking via time overlap
+    upcoming_booking_map = {}
+    for w in all_upcoming_windows:
+        for appt in all_upcoming_appointments:
+            if appt.start_at < w.end_at and appt.end_at > w.start_at:
+                upcoming_booking_map[w.id] = appt
+                break
+
     feedback = request.query_params.get("feedback", "")
     feedback_messages = {
         "created": ("success", "Slot wurde angelegt."),
@@ -239,6 +284,8 @@ def teacher_planner(request: Request, db: Session = Depends(get_db)):
             "windows_by_day": windows_by_day,
             "appointments_by_window": appointments_by_window,
             "pending_confirmations": pending_confirmations,
+            "all_upcoming_windows": all_upcoming_windows,
+            "upcoming_booking_map": upcoming_booking_map,
             "feedback_level": feedback_level,
             "feedback_message": feedback_message,
             "now": datetime.now(),
