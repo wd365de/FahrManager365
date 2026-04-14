@@ -81,16 +81,17 @@ if (pushAvailable && 'serviceWorker' in navigator) {
     document.getElementById('push-enable-btn').addEventListener('click', function() {
         var statusEl = document.getElementById('push-status');
         statusEl.textContent = 'Warte auf Berechtigung...';
-        fetch('/push/vapid-public-key').then(function(r){ return r.json(); }).then(function(data) {
+        fetch('/api/push/config', { credentials: 'same-origin' }).then(function(r){ return r.json(); }).then(function(data) {
             var vapidKey = data.public_key;
             var keyBytes = urlBase64ToUint8Array(vapidKey);
             return navigator.serviceWorker.ready.then(function(reg) {
                 return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes });
             });
         }).then(function(sub) {
-            return fetch('/push/subscribe', {
+            return fetch('/api/push/subscribe', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
+                credentials: 'same-origin',
                 body: JSON.stringify(sub.toJSON())
             });
         }).then(function() {
@@ -104,7 +105,7 @@ if (pushAvailable && 'serviceWorker' in navigator) {
         navigator.serviceWorker.ready.then(function(reg){ return reg.pushManager.getSubscription(); }).then(function(sub) {
             if (!sub) return;
             return sub.unsubscribe().then(function() {
-                return fetch('/push/unsubscribe', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({endpoint: sub.endpoint}) });
+                return fetch('/api/push/unsubscribe', { method: 'POST', headers: {'Content-Type': 'application/json'}, credentials: 'same-origin', body: JSON.stringify({endpoint: sub.endpoint}) });
             });
         }).then(function() {
             statusEl.textContent = 'Push deaktiviert.';
@@ -114,7 +115,7 @@ if (pushAvailable && 'serviceWorker' in navigator) {
 
     document.getElementById('push-test-btn').addEventListener('click', function() {
         var statusEl = document.getElementById('push-status');
-        fetch('/push/test', { method: 'POST' }).then(function(r){ return r.json(); }).then(function(d) {
+        fetch('/api/push/test', { method: 'POST', credentials: 'same-origin' }).then(function(r){ return r.json(); }).then(function(d) {
             statusEl.textContent = d.ok ? 'Test-Nachricht gesendet.' : ('Fehler: ' + (d.error || 'Unbekannt'));
         });
     });
