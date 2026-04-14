@@ -45,9 +45,10 @@
 </div>
 
 {# ── Benachrichtigungen aktivieren (nur wenn noch nicht eingerichtet) ── #}
-{% set push_active = push_mvp_available %}
 {% set wa_active = student_whatsapp_opted_in and student_whatsapp_phone %}
-{% if not push_active or not wa_active %}
+{% set can_setup_wa = not wa_active %}
+{% set can_setup_push = push_mvp_available %}
+{% if can_setup_wa or can_setup_push %}
 <div class="alert alert-warning d-flex align-items-start gap-3 mb-4" role="alert">
     <span style="font-size:1.3rem;">🔔</span>
     <div>
@@ -60,7 +61,7 @@
 </div>
 <div class="collapse mb-4" id="notifSetupPanel">
     <div class="card card-body border-warning">
-        {% if not wa_active %}
+        {% if can_setup_wa %}
         <h6 class="mb-2">💬 WhatsApp-Benachrichtigungen</h6>
         <form method="post" action="/portal/whatsapp" class="row g-2 align-items-end mb-3">
             <div class="col-12 col-sm-5">
@@ -90,8 +91,8 @@
             </div>
         </form>
         {% endif %}
-        {% if push_mvp_available and not push_active %}
-        <hr class="my-2">
+        {% if can_setup_push %}
+        {% if can_setup_wa %}<hr class="my-2">{% endif %}
         <h6 class="mb-2">🔔 Browser-Push</h6>
         <div class="d-flex flex-wrap gap-2">
             <button type="button" id="push-enable-btn" class="btn btn-sm btn-primary">Push aktivieren</button>
