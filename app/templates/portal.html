@@ -60,7 +60,7 @@
 {# ── Nächster bestätigter Termin ──────────────────────────────────────── #}
 {% set confirmed_upcoming = [] %}
 {% for appt in appointments %}
-    {% if appt.status == 'booked' and not appt.requires_teacher_confirmation %}
+    {% if appt.status == 'booked' and not appt.requires_teacher_confirmation and appt.start_at > now %}
         {% set _ = confirmed_upcoming.append(appt) %}
     {% endif %}
 {% endfor %}

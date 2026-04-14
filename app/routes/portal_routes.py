@@ -154,12 +154,14 @@ def portal(request: Request, db: Session = Depends(get_db)):
 
     booking_window_days = (STUDENT_DIRECT_BOOKING_START_LEAD_HOURS + STUDENT_DIRECT_BOOKING_WINDOW_HOURS) // 24
     just_booked = request.query_params.get("booked") == "1"
+    now = datetime.now()
 
     return templates.TemplateResponse(
         "portal.html",
         {
             "request": request,
             "user": user,
+            "now": now,
             "appointments": appointments,
             "readiness": readiness,
             "booking_options": filtered_options,
