@@ -30,7 +30,7 @@ def _send_reminders() -> None:
 
     db = SessionLocal()
     try:
-        now = datetime.utcnow()
+        now = datetime.now()
         # Look ahead up to 120 min to catch all possible reminder windows
         look_ahead = now + timedelta(minutes=120)
 
