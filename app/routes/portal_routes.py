@@ -66,14 +66,13 @@ def portal(request: Request, db: Session = Depends(get_db)):
         windows_query = windows_query.filter(AvailabilityWindow.id == -1)
 
     windows = windows_query.order_by(AvailabilityWindow.start_at.asc()).all()
-    show_locked_slots = get_planner_setting_bool(db, PLANNER_SETTING_SHOW_LOCKED_SLOTS)
     booking_options = build_booking_options(
         db,
         windows=windows,
         duration_options=ALLOWED_APPOINTMENT_DURATIONS,
         step_minutes=BOOKING_STEP_MINUTES,
         buffer_minutes=BOOKING_BUFFER_MINUTES,
-        include_locked_slots=show_locked_slots,
+        include_locked_slots=True,  # Alle Slots anzeigen, gesperrte mit Hinweis
         direct_booking_start_lead_hours=STUDENT_DIRECT_BOOKING_START_LEAD_HOURS,
         direct_booking_window_hours=STUDENT_DIRECT_BOOKING_WINDOW_HOURS,
     )
