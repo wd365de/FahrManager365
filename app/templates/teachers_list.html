@@ -54,12 +54,17 @@
             <td>{{ teacher.user.name }}</td>
             <td>{{ teacher.user.email }}</td>
             <td>
-                <form method="post" action="/teachers/{{ teacher.id }}/whatsapp" class="d-flex gap-2 align-items-center">
+                <form method="post" action="/teachers/{{ teacher.id }}/whatsapp" class="d-flex gap-2 align-items-center flex-wrap">
                     <div class="input-group input-group-sm" style="max-width:200px">
                         <span class="input-group-text">+</span>
                         <input class="form-control form-control-sm" type="text" name="whatsapp_phone"
                                value="{{ teacher.whatsapp_phone or '' }}" placeholder="4915112345678"
                                inputmode="numeric">
+                    </div>
+                    <div class="input-group input-group-sm" style="max-width:130px" title="Erinnerung X Minuten vor Termin">
+                        <input class="form-control form-control-sm" type="number" name="reminder_minutes"
+                               value="{{ teacher.reminder_minutes or 30 }}" min="5" max="240">
+                        <span class="input-group-text">Min</span>
                     </div>
                     <button class="btn btn-sm btn-outline-secondary" type="submit">Speichern</button>
                 </form>

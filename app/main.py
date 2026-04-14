@@ -16,6 +16,7 @@ from app.database import Base, engine
 from app.database import SessionLocal
 from app.models import Student, Teacher, User
 from app.planner_settings import ensure_default_planner_settings
+from app.reminder import start_reminder_scheduler, stop_reminder_scheduler
 from app.routes.admin_routes import router as admin_router
 from app.routes.appointments_routes import router as appointments_router
 from app.routes.auth_routes import router as auth_router
@@ -138,6 +139,11 @@ def run_local_schema_migrations() -> None:
             with engine.begin() as connection:
                 connection.execute(
                     text("ALTER TABLE appointments ADD COLUMN is_closed BOOLEAN NOT NULL DEFAULT 0")
+                )
+        if "reminder_sent" not in columns:
+            with engine.begin() as connection:
+                connection.execute(
+                    text("ALTER TABLE appointments ADD COLUMN reminder_sent BOOLEAN NOT NULL DEFAULT FALSE")
                 )
         if "requires_teacher_confirmation" not in columns:
             with engine.begin() as connection:
@@ -304,12 +310,18 @@ def run_local_schema_migrations() -> None:
         if "whatsapp_opted_in" not in columns:
             with engine.begin() as connection:
                 connection.execute(text("ALTER TABLE students ADD COLUMN whatsapp_opted_in BOOLEAN NOT NULL DEFAULT FALSE"))
+        if "reminder_minutes" not in columns:
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE students ADD COLUMN reminder_minutes INTEGER NOT NULL DEFAULT 30"))
 
     if inspector.has_table("teachers"):
         columns = {column["name"] for column in inspector.get_columns("teachers")}
         if "whatsapp_phone" not in columns:
             with engine.begin() as connection:
                 connection.execute(text("ALTER TABLE teachers ADD COLUMN whatsapp_phone VARCHAR(50)"))
+        if "reminder_minutes" not in columns:
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE teachers ADD COLUMN reminder_minutes INTEGER NOT NULL DEFAULT 30"))
 
     # Replace uq_teacher_appointment with a partial unique index (booked only),
     # so cancelled slots can be re-booked without a DB constraint violation.
@@ -338,6 +350,12 @@ def on_startup() -> None:
         ensure_default_planner_settings(db)
     finally:
         db.close()
+    start_reminder_scheduler()
+
+
+@app.on_event("shutdown")
+def on_shutdown() -> None:
+    stop_reminder_scheduler()
 
 
 app.include_router(auth_router)

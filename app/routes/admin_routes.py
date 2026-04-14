@@ -1253,6 +1253,7 @@ def students_create(
     cost_bearer: str = Form(""),
     whatsapp_phone: str = Form(""),
     whatsapp_opted_in: str = Form(""),
+    reminder_minutes: int = Form(30),
     theory_status: str = Form("offen"),
     practical_status: str = Form("offen"),
     notes: str = Form(""),
@@ -1396,6 +1397,7 @@ def students_create(
         theory_status=theory_status,
         practical_status=practical_status,
         notes=notes,
+        reminder_minutes=max(5, min(240, reminder_minutes)),
     )
     db.add(student)
     db.commit()
@@ -1472,6 +1474,7 @@ def students_update(
     notes: str = Form(""),
     whatsapp_phone: str = Form(""),
     whatsapp_opted_in: str = Form(""),
+    reminder_minutes: int = Form(30),
     db: Session = Depends(get_db),
 ):
     _, redirect = require_admin(request, db)
@@ -1607,6 +1610,7 @@ def students_update(
     student.cost_bearer = cost_bearer.strip() or None
     student.whatsapp_phone = "".join(c for c in whatsapp_phone if c.isdigit()) or None
     student.whatsapp_opted_in = whatsapp_opted_in == "on"
+    student.reminder_minutes = max(5, min(240, reminder_minutes))
     student.theory_status = theory_status
     student.practical_status = practical_status
     student.notes = notes
@@ -1757,6 +1761,7 @@ def teacher_whatsapp_update(
     teacher_id: int,
     request: Request,
     whatsapp_phone: str = Form(""),
+    reminder_minutes: int = Form(30),
     db: Session = Depends(get_db),
 ):
     _, redirect = require_admin(request, db)
@@ -1767,6 +1772,7 @@ def teacher_whatsapp_update(
     if teacher:
         cleaned = "".join(c for c in whatsapp_phone if c.isdigit())
         teacher.whatsapp_phone = cleaned or None
+        teacher.reminder_minutes = max(5, min(240, reminder_minutes))
         db.commit()
     return RedirectResponse(url="/teachers", status_code=302)
 

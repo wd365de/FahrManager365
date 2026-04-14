@@ -78,6 +78,7 @@ class Student(Base):
     notes = Column(Text, nullable=True)
     whatsapp_phone = Column(String(50), nullable=True)
     whatsapp_opted_in = Column(Boolean, nullable=False, default=False)
+    reminder_minutes = Column(Integer, nullable=False, default=30)
 
     user = relationship("User", back_populates="student")
     teacher = relationship("Teacher", back_populates="students")
@@ -90,6 +91,7 @@ class Teacher(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
     whatsapp_phone = Column(String(50), nullable=True)
+    reminder_minutes = Column(Integer, nullable=False, default=30)
 
     user = relationship("User", back_populates="teacher")
     students = relationship("Student", back_populates="teacher")
@@ -133,6 +135,7 @@ class Appointment(Base):
     is_request_seen_by_admin = Column(Boolean, nullable=False, default=False)
     is_read_by_student = Column(Boolean, nullable=False, default=False)
     is_closed = Column(Boolean, nullable=False, default=False)
+    reminder_sent = Column(Boolean, nullable=False, default=False)
 
     student = relationship("Student", back_populates="appointments")
     teacher = relationship("Teacher", back_populates="appointments")

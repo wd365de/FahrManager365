@@ -72,6 +72,14 @@
                            inputmode="numeric" pattern="[0-9]*" maxlength="20">
                 </div>
             </div>
+            <div class="col-auto">
+                <label class="form-label small mb-1">Erinnerung vor Termin</label>
+                <div class="input-group input-group-sm" style="max-width:110px">
+                    <input class="form-control" type="number" name="reminder_minutes"
+                           value="{{ student_reminder_minutes }}" min="5" max="240">
+                    <span class="input-group-text">Min</span>
+                </div>
+            </div>
             <div class="col-12 col-sm-auto d-flex align-items-end gap-3">
                 <div class="form-check mb-1">
                     <input class="form-check-input" type="checkbox" name="whatsapp_opted_in" id="portal-whatsapp-opt"
@@ -386,7 +394,7 @@
         </h2>
         <div id="settingsBody" class="accordion-collapse collapse">
             <div class="accordion-body">
-                <h6 class="mb-2">💬 WhatsApp</h6>
+                <h6 class="mb-2">💬 WhatsApp &amp; Erinnerungen</h6>
                 <form method="post" action="/portal/whatsapp" class="row g-2 align-items-end mb-3">
                     <div class="col-12 col-sm-5">
                         <label class="form-label small mb-1" for="portal-whatsapp-phone-s">Nummer</label>
@@ -395,6 +403,14 @@
                             <input class="form-control" type="text" id="portal-whatsapp-phone-s" name="whatsapp_phone"
                                    value="{{ student_whatsapp_phone }}" placeholder="4915112345678"
                                    inputmode="numeric" pattern="[0-9]*" maxlength="20">
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <label class="form-label small mb-1">Erinnerung vor Termin</label>
+                        <div class="input-group input-group-sm" style="max-width:110px">
+                            <input class="form-control" type="number" name="reminder_minutes"
+                                   value="{{ student_reminder_minutes }}" min="5" max="240">
+                            <span class="input-group-text">Min</span>
                         </div>
                     </div>
                     <div class="col-12 col-sm-auto d-flex align-items-end gap-3">

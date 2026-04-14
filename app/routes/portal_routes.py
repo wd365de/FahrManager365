@@ -151,6 +151,7 @@ def portal(request: Request, db: Session = Depends(get_db)):
     whatsapp_number = get_planner_setting_value(db, SCHOOL_WHATSAPP_NUMBER)
     student_whatsapp_phone = user.student.whatsapp_phone or ""
     student_whatsapp_opted_in = user.student.whatsapp_opted_in
+    student_reminder_minutes = user.student.reminder_minutes or 30
 
     booking_window_days = (STUDENT_DIRECT_BOOKING_START_LEAD_HOURS + STUDENT_DIRECT_BOOKING_WINDOW_HOURS) // 24
     just_booked = request.query_params.get("booked") == "1"
@@ -181,6 +182,7 @@ def portal(request: Request, db: Session = Depends(get_db)):
             "whatsapp_number": whatsapp_number,
             "student_whatsapp_phone": student_whatsapp_phone,
             "student_whatsapp_opted_in": student_whatsapp_opted_in,
+            "student_reminder_minutes": student_reminder_minutes,
             "min_appointment_duration": min(ALLOWED_APPOINTMENT_DURATIONS),
             "booking_window_days": booking_window_days,
             "just_booked": just_booked,
@@ -193,6 +195,7 @@ def portal_whatsapp_update(
     request: Request,
     whatsapp_phone: str = Form(""),
     whatsapp_opted_in: str = Form(""),
+    reminder_minutes: int = Form(30),
     db: Session = Depends(get_db),
 ):
     user = get_authenticated_user(request, db)
@@ -202,5 +205,6 @@ def portal_whatsapp_update(
     cleaned = "".join(c for c in whatsapp_phone if c.isdigit())
     user.student.whatsapp_phone = cleaned or None
     user.student.whatsapp_opted_in = whatsapp_opted_in == "on"
+    user.student.reminder_minutes = max(5, min(240, reminder_minutes))
     db.commit()
     return RedirectResponse(url="/portal", status_code=302)

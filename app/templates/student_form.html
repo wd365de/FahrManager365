@@ -228,6 +228,13 @@
             </div>
         </div>
 
+        <div class="col-md-4">
+            <label class="form-label">Erinnerung vor Termin (Minuten)</label>
+            <input class="form-control" type="number" name="reminder_minutes" min="5" max="240"
+                   value="{{ values.reminder_minutes if values.reminder_minutes is defined else ((student.reminder_minutes or 30) if student else 30) }}">
+            <div class="form-text">Push &amp; WhatsApp-Erinnerung, Standard: 30 Min.</div>
+        </div>
+
         <div class="col-12"><h2 class="h6 mb-0 mt-3 student-form-section-title">Zusatzinfos</h2></div>
         <div class="col-md-6 col-lg-4">
             <label class="form-label">Filiale Prüfort *</label>
