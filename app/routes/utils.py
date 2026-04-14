@@ -77,9 +77,10 @@ def build_booking_options(
                     end_at=end_at,
                     buffer_minutes=buffer_minutes,
                 )
-                can_book_now = now >= window.bookable_from
                 is_in_future = cursor >= now
-                if is_in_future and not has_overlap and (can_book_now or include_locked_slots):
+                # include_locked_slots=True means: show all future slots, ignore bookable_from
+                can_book_now = include_locked_slots or (now >= window.bookable_from)
+                if is_in_future and not has_overlap and can_book_now:
                     is_direct = cursor <= direct_until
                     options.append(
                         {
@@ -90,8 +91,8 @@ def build_booking_options(
                             "duration_min": duration,
                             "start_iso": cursor.isoformat(),
                             "bookable_from": window.bookable_from,
-                            "can_book_now": can_book_now,
-                            "can_submit_now": can_book_now,
+                            "can_book_now": True,
+                            "can_submit_now": True,
                             "booking_mode": "book" if is_direct else "request",
                         }
                     )

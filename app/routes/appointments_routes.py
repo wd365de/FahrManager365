@@ -439,9 +439,6 @@ def book_appointment(
     direct_until = datetime.now() + timedelta(hours=STUDENT_DIRECT_BOOKING_START_LEAD_HOURS)
     requires_teacher_confirmation = start_dt > direct_until
 
-    if datetime.now() < window.bookable_from:
-        return RedirectResponse(url="/portal", status_code=302)
-
     if start_dt < window.start_at or end_dt > window.end_at:
         return RedirectResponse(url="/portal", status_code=302)
 
