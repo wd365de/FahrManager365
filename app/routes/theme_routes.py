@@ -87,16 +87,8 @@ def rail_badges_api(request: Request, db: Session = Depends(get_db)):
             .count()
         )
     elif user.role == "student" and user.student:
-        pending = (
-            db.query(Appointment)
-            .filter(
-                Appointment.student_id == user.student.id,
-                Appointment.status == "booked",
-                Appointment.requires_teacher_confirmation == True,
-                Appointment.is_closed == False,
-            )
-            .count()
-        )
+        # Für Schüler: keine "pending"-Badge (sie müssen nichts bestätigen)
+        pending = 0
         today = (
             db.query(Appointment)
             .filter(

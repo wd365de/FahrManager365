@@ -239,12 +239,13 @@
 
     // Rail notification badges
     fetch('/api/rail-badges', {credentials: 'same-origin'}).then(function(r){ return r.json(); }).then(function(b){
-        function addBadge(el, count, color) {
+        function addBadge(el, count, color, tooltip) {
             if (!el || count < 1) return;
             var badge = document.createElement('span');
             badge.className = 'rail-badge';
             badge.style.cssText = 'position:absolute;top:2px;right:2px;min-width:16px;height:16px;border-radius:8px;background:' + color + ';color:#fff;font-size:10px;font-weight:700;line-height:16px;text-align:center;padding:0 3px;pointer-events:none;';
             badge.textContent = count > 9 ? '9+' : count;
+            if (tooltip) el.title = tooltip;
             el.style.position = 'relative';
             el.appendChild(badge);
         }
@@ -252,15 +253,15 @@
         railLinks.forEach(function(link) {
             var href = link.getAttribute('href') || '';
             if (href.includes('/appointments') || href.includes('/teacher/planner')) {
-                if (b.pending > 0) addBadge(link, b.pending, '#f59e0b');
+                if (b.pending > 0) addBadge(link, b.pending, '#f59e0b', b.pending + ' offene Anfrage(n)');
             }
         });
-        // Today badge on first rail link (home/termine)
+        // Heute-Badge auf erstem Rail-Link
         if (railLinks.length > 0 && b.today > 0) {
             var firstLink = railLinks[0];
             var href = firstLink.getAttribute('href') || '';
             if (href.includes('/appointments') || href.includes('/portal') || href.includes('/dashboard')) {
-                addBadge(firstLink, b.today, '#3b82f6');
+                addBadge(firstLink, b.today, '#3b82f6', b.today + ' Termin(e) heute');
             }
         }
     }).catch(function(){});
