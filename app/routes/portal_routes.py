@@ -207,4 +207,48 @@ def portal_whatsapp_update(
     user.student.whatsapp_opted_in = whatsapp_opted_in == "on"
     user.student.reminder_minutes = max(5, min(240, reminder_minutes))
     db.commit()
-    return RedirectResponse(url="/portal", status_code=302)
+    return RedirectResponse(url="/student/settings?saved=1", status_code=302)
+
+
+@router.get("/student/settings")
+def student_settings_form(request: Request, db: Session = Depends(get_db)):
+    user = get_authenticated_user(request, db)
+    if not user or user.role != "student" or not user.student:
+        return redirect_to_login()
+
+    auto_reminders_enabled = get_planner_setting_bool(db, PLANNER_SETTING_AUTO_REMINDERS)
+    push_mvp_available = auto_reminders_enabled and has_push_config()
+    saved = request.query_params.get("saved") == "1"
+
+    return templates.TemplateResponse(
+        "student_settings.html",
+        {
+            "request": request,
+            "user": user,
+            "student": user.student,
+            "push_mvp_available": push_mvp_available,
+            "saved": saved,
+        },
+    )
+
+
+@router.post("/student/settings")
+def student_settings_save(
+    request: Request,
+    mobile_phone: str = Form(""),
+    whatsapp_phone: str = Form(""),
+    whatsapp_opted_in: str = Form(""),
+    reminder_minutes: int = Form(30),
+    db: Session = Depends(get_db),
+):
+    user = get_authenticated_user(request, db)
+    if not user or user.role != "student" or not user.student:
+        return redirect_to_login()
+
+    user.student.mobile_phone = mobile_phone.strip() or None
+    cleaned = "".join(c for c in whatsapp_phone if c.isdigit())
+    user.student.whatsapp_phone = cleaned or None
+    user.student.whatsapp_opted_in = whatsapp_opted_in == "on"
+    user.student.reminder_minutes = max(5, min(240, reminder_minutes))
+    db.commit()
+    return RedirectResponse(url="/student/settings?saved=1", status_code=302)
