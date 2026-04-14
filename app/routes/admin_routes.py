@@ -3,7 +3,7 @@ import re
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session, joinedload
@@ -20,7 +20,7 @@ from app.planner_settings import (
 from app.push_notifications import has_push_config, notify_admins, notify_user
 from app.whatsapp import has_whatsapp_config, notify_teacher_new_booking
 from app.routes.action_tokens import make_action_token
-from app.settings import ALLOWED_APPOINTMENT_DURATIONS, DEFAULT_BOOKABLE_HOURS_BEFORE, WEEK_SLOT_DURATION_MINUTES
+from app.settings import ALLOWED_APPOINTMENT_DURATIONS, DEFAULT_BOOKABLE_HOURS_BEFORE, SCHOOL_LOGO_URL, WEEK_SLOT_DURATION_MINUTES
 from app.settings import (
     MASTER_DATA_APPOINTMENT_TYPES,
     MASTER_DATA_CLASSES,
@@ -39,6 +39,8 @@ from app.settings import (
     PLANNER_SETTING_AUTO_REMINDERS,
     PLANNER_SETTING_DEFINITIONS,
     PLANNER_SETTING_SHOW_LOCKED_SLOTS,
+    SCHOOL_NAME,
+    SCHOOL_PRIMARY_COLOR,
     SCHOOL_WHATSAPP_NUMBER,
 )
 from app.routes.utils import (
@@ -562,6 +564,10 @@ def settings_page(request: Request, db: Session = Depends(get_db)):
     show_locked_slots = get_planner_setting_bool(db, PLANNER_SETTING_SHOW_LOCKED_SLOTS)
     auto_reminders = get_planner_setting_bool(db, PLANNER_SETTING_AUTO_REMINDERS)
     whatsapp_number = get_planner_setting_value(db, SCHOOL_WHATSAPP_NUMBER)
+    school_name = get_planner_setting_value(db, SCHOOL_NAME) or ""
+    school_color = get_planner_setting_value(db, SCHOOL_PRIMARY_COLOR) or "#e11d48"
+    school_logo_url = get_planner_setting_value(db, SCHOOL_LOGO_URL) or ""
+    saved = request.query_params.get("saved") == "1"
     return templates.TemplateResponse(
         "settings.html",
         {
@@ -580,6 +586,10 @@ def settings_page(request: Request, db: Session = Depends(get_db)):
             "show_locked_slots": show_locked_slots,
             "auto_reminders": auto_reminders,
             "whatsapp_number": whatsapp_number,
+            "school_name": school_name,
+            "school_color": school_color,
+            "school_logo_url": school_logo_url,
+            "saved": saved,
         },
     )
 
@@ -590,6 +600,8 @@ def settings_update(
     show_locked_slots: str | None = Form(None),
     auto_reminders: str | None = Form(None),
     whatsapp_number: str = Form(""),
+    school_name: str = Form(""),
+    school_color: str = Form(""),
     db: Session = Depends(get_db),
 ):
     _, redirect = require_admin(request, db)
@@ -608,7 +620,46 @@ def settings_update(
     )
     cleaned_number = "".join(c for c in whatsapp_number if c.isdigit())
     set_planner_setting_value(db, SCHOOL_WHATSAPP_NUMBER, cleaned_number)
-    return RedirectResponse(url="/settings", status_code=302)
+    if school_name.strip():
+        set_planner_setting_value(db, SCHOOL_NAME, school_name.strip())
+    import re as _re
+    if school_color.strip() and _re.match(r"^#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?$", school_color.strip()):
+        set_planner_setting_value(db, SCHOOL_PRIMARY_COLOR, school_color.strip())
+    return RedirectResponse(url="/settings?saved=1", status_code=302)
+
+
+@router.post("/settings/upload-logo")
+async def settings_upload_logo(
+    request: Request,
+    logo: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    _, redirect = require_admin(request, db)
+    if redirect:
+        return redirect
+
+    allowed_types = {"image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml"}
+    if logo.content_type not in allowed_types:
+        return RedirectResponse(url="/settings?saved=0&logo_error=1", status_code=302)
+
+    ext = Path(logo.filename).suffix.lower() if logo.filename else ".png"
+    if ext not in {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"}:
+        ext = ".png"
+
+    uploads_dir = Path(__file__).resolve().parent.parent / "static" / "uploads"
+    uploads_dir.mkdir(exist_ok=True)
+    logo_path = uploads_dir / f"school_logo{ext}"
+
+    # Remove old logo files with different extensions
+    for old in uploads_dir.glob("school_logo.*"):
+        old.unlink(missing_ok=True)
+
+    contents = await logo.read()
+    logo_path.write_bytes(contents)
+
+    logo_url = f"/static/uploads/school_logo{ext}"
+    set_planner_setting_value(db, SCHOOL_LOGO_URL, logo_url)
+    return RedirectResponse(url="/settings?saved=1", status_code=302)
 
 
 @router.get("/dashboard")

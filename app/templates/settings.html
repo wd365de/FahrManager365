@@ -117,11 +117,71 @@
 
 <h1 class="h4 mb-3">Einstellungen</h1>
 
+{% if saved %}
+<div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
+    Einstellungen gespeichert.
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
 <section class="settings-wrap">
+
+    {# ── Schulprofil ── #}
+    <article class="settings-card">
+        <div class="settings-card-body">
+            <p class="settings-kicker">Schulprofil</p>
+            <form method="post" action="/settings">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Name der Fahrschule</label>
+                        <input class="form-control" type="text" name="school_name"
+                               value="{{ school_name }}" placeholder="z. B. Fahrschule Mustermann">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Schulfarbe</label>
+                        <div class="input-group">
+                            <input class="form-control" type="text" name="school_color"
+                                   value="{{ school_color }}" placeholder="#e11d48" maxlength="7">
+                            <span class="input-group-text p-1">
+                                <input type="color" class="form-control form-control-color border-0 p-0"
+                                       style="width:28px;height:28px;cursor:pointer"
+                                       value="{{ school_color }}"
+                                       oninput="this.closest('.input-group').querySelector('[name=school_color]').value=this.value">
+                            </span>
+                        </div>
+                        <div class="form-text">Hex-Code, z. B. #e11d48</div>
+                    </div>
+                    <input type="hidden" name="show_locked_slots" value="">
+                    <input type="hidden" name="auto_reminders" value="">
+                    <input type="hidden" name="whatsapp_number" value="{{ whatsapp_number }}">
+                </div>
+                <button class="btn btn-primary btn-sm" type="submit">Schulprofil speichern</button>
+            </form>
+
+            <hr class="my-3">
+
+            <p class="fw-semibold mb-2">Schullogo</p>
+            {% if school_logo_url %}
+            <div class="mb-2 d-flex align-items-center gap-3">
+                <img src="{{ school_logo_url }}" alt="Schullogo"
+                     style="max-height:64px;max-width:180px;object-fit:contain;background:#f1f5f9;padding:4px;border-radius:6px;border:1px solid #dbe3ee;">
+                <span class="text-muted small">Aktuelles Logo</span>
+            </div>
+            {% endif %}
+            <form method="post" action="/settings/upload-logo" enctype="multipart/form-data" class="d-flex gap-2 align-items-center flex-wrap">
+                <input class="form-control form-control-sm" type="file" name="logo" accept="image/*" style="max-width:280px">
+                <button class="btn btn-outline-primary btn-sm" type="submit">Logo hochladen</button>
+            </form>
+            <div class="form-text mt-1">PNG, JPG, SVG oder WebP — wird proportional eingepasst (keine Beschneidung).</div>
+        </div>
+    </article>
+
     <article class="settings-card">
         <div class="settings-card-body">
             <p class="settings-kicker">Terminplaner</p>
             <form method="post" action="/settings">
+                <input type="hidden" name="school_name" value="{{ school_name }}">
+                <input type="hidden" name="school_color" value="{{ school_color }}">
                 <div class="settings-option">
                     <div class="settings-head">
                         <div>

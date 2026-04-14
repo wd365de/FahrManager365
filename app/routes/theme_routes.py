@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.planner_settings import get_planner_setting_value
-from app.settings import SCHOOL_NAME, SCHOOL_PRIMARY_COLOR
+from app.settings import SCHOOL_LOGO_URL, SCHOOL_NAME, SCHOOL_PRIMARY_COLOR
 
 router = APIRouter()
 
@@ -45,7 +45,9 @@ def theme_css(db: Session = Depends(get_db)):
 
 @router.get("/api/school-settings")
 def school_settings_api(db: Session = Depends(get_db)):
+    logo_url = (get_planner_setting_value(db, SCHOOL_LOGO_URL) or "").strip()
     return {
         "name": (get_planner_setting_value(db, SCHOOL_NAME) or "Fahrschule").strip(),
         "color": _safe_color(get_planner_setting_value(db, SCHOOL_PRIMARY_COLOR), "#e11d48"),
+        "logo_url": logo_url if logo_url else None,
     }

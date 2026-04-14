@@ -14,7 +14,7 @@
 <header class="mobile-topbar d-lg-none">
     <div class="mobile-topbar-head">
         <a class="mobile-brand" href="{% if user.role == 'student' %}/portal{% else %}/dashboard{% endif %}">
-            <img src="/static/logo_fahrmanager360.png" alt="FahrManager 360" class="brand-logo-mobile">
+            <img id="mobile-logo-img" src="/static/logo_fahrmanager360.png" alt="FahrManager 360" class="brand-logo-mobile">
         </a>
         <div class="d-flex align-items-center gap-2">
             <span class="small text-muted">Hallo, {{ user.name.split(' ')[0] }}</span>
@@ -62,8 +62,9 @@
 
         <div class="app-sidebar-panel">
             <a class="app-brand" href="/dashboard">
-                <img src="/static/logo_fahrmanager360.png" alt="FahrManager 360" class="brand-logo-sidebar">
+                <img id="sidebar-logo-img" src="/static/logo_fahrmanager360.png" alt="FahrManager 360" class="brand-logo-sidebar">
             </a>
+            <div id="sidebar-school-name" class="sidebar-school-name"></div>
             <div class="sidebar-section-title">Navigation</div>
             <nav class="sidebar-nav">
                 {% if user.role == "admin" %}
@@ -191,13 +192,36 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     fetch('/api/school-settings').then(function(r){ return r.json(); }).then(function(s){
-        var logo = document.getElementById('rail-logo-link');
-        if (logo && s.name) {
+        // Rail logo: initials or school logo image
+        var rail = document.getElementById('rail-logo-link');
+        if (rail && s.name) {
             var words = s.name.trim().split(/\s+/);
-            logo.textContent = words.length >= 2
+            var initials = words.length >= 2
                 ? (words[0][0] + words[1][0]).toUpperCase()
                 : s.name.substring(0, 2).toUpperCase();
-            logo.title = s.name;
+            if (s.logo_url) {
+                rail.innerHTML = '<img src="' + s.logo_url + '" alt="' + s.name + '" style="width:100%;height:100%;object-fit:contain;display:block;">';
+            } else {
+                rail.textContent = initials;
+            }
+            rail.title = s.name;
+        }
+        // Sidebar panel logo
+        var sidebarImg = document.getElementById('sidebar-logo-img');
+        if (sidebarImg && s.logo_url) {
+            sidebarImg.src = s.logo_url;
+            sidebarImg.alt = s.name || 'Schullogo';
+        }
+        // Sidebar school name
+        var nameEl = document.getElementById('sidebar-school-name');
+        if (nameEl && s.name) {
+            nameEl.textContent = s.name;
+        }
+        // Mobile logo
+        var mobileImg = document.getElementById('mobile-logo-img');
+        if (mobileImg && s.logo_url) {
+            mobileImg.src = s.logo_url;
+            mobileImg.alt = s.name || 'Schullogo';
         }
     }).catch(function(){});
 </script>
