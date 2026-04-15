@@ -57,8 +57,14 @@ def send_whatsapp(to_number: str, message: str) -> bool:
             auth=(account_sid, auth_token),
             timeout=10,
         )
-        return resp.status_code in (200, 201)
-    except Exception:
+        if resp.status_code in (200, 201):
+            logger.info("whatsapp: sent to %s (status %s)", to_number, resp.status_code)
+            return True
+        else:
+            logger.error("whatsapp: Twilio error %s: %s", resp.status_code, resp.text)
+            return False
+    except Exception as exc:
+        logger.error("whatsapp: request exception to %s: %s", to_number, exc)
         return False
 
 
