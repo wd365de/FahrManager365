@@ -38,7 +38,6 @@ def _send_reminders() -> None:
             db.query(Appointment)
             .filter(
                 Appointment.status == "booked",
-                Appointment.requires_teacher_confirmation == False,  # only confirmed
                 Appointment.reminder_sent == False,
                 Appointment.start_at >= now,
                 Appointment.start_at <= look_ahead,
